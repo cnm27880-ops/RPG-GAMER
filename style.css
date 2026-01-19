@@ -1,0 +1,896 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;400;700;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #15171e;
+    font-family: 'Noto Serif TC', serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#gameCanvas {
+    display: block;
+    touch-action: none;
+    /* 【修復】解決手機版跑版與鍵盤推擠問題 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* 字體預載 */
+.font-preload {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    font-family: 'Noto Serif TC', serif;
+}
+
+/* 工具列 */
+.toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+@media (min-width: 600px) {
+    .toolbar { top: 20px; right: 20px; gap: 12px; }
+}
+
+.tool-btn {
+    background: rgba(20, 22, 30, 0.9);
+    border: 1px solid #3a3d4a;
+    color: #7a7d8a;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: relative;
+}
+
+.tool-btn:hover, .tool-btn:active {
+    border-color: #c9a227;
+    color: #c9a227;
+    box-shadow: 0 0 15px rgba(201, 162, 39, 0.2);
+}
+
+.tool-btn.active {
+    color: #c9a227;
+    border-color: #c9a227;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+/* 徽章 */
+.tool-btn .badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: linear-gradient(135deg, #c9a227, #a8860f);
+    color: #0d0f14;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+/* 日曆顯示 */
+.calendar-display {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(20, 22, 30, 0.9);
+    border: 1px solid #3a3d4a;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #b0a080;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+    z-index: 10;
+}
+
+.calendar-display .date {
+    font-weight: 700;
+    font-size: 16px;
+    color: #d4c4a0;
+}
+
+.calendar-display .time {
+    font-size: 12px;
+    color: #7a7d8a;
+    margin-top: 2px;
+}
+
+/* 命運點顯示 */
+.fate-points {
+    position: absolute;
+    top: 60px;
+    left: 12px;
+    background: linear-gradient(135deg, rgba(30, 25, 40, 0.95), rgba(20, 18, 30, 0.95));
+    border: 1px solid #5a4a7a;
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: #a090c0;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fate-points .icon {
+    font-size: 18px;
+}
+
+.fate-points .value {
+    font-weight: 900;
+    font-size: 18px;
+    color: #c0a0e0;
+}
+
+/* 模態視窗 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: linear-gradient(180deg, #1a1c24 0%, #14161c 100%);
+    border: 1px solid #3a3d4a;
+    width: 95%;
+    max-width: 900px;
+    max-height: 90vh;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(20px) scale(0.98);
+    transition: transform 0.3s ease;
+}
+
+@media (min-width: 600px) {
+    .modal-content { padding: 30px; }
+}
+
+.modal-overlay.show .modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.modal-title {
+    font-weight: 900;
+    font-size: 24px;
+    color: #c9a227;
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #2a2d3a;
+    letter-spacing: 3px;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 18px;
+    color: #6a6d7a;
+    cursor: pointer;
+    font-size: 28px;
+    font-weight: 200;
+    line-height: 1;
+    padding: 5px;
+    transition: color 0.2s;
+}
+.close-btn:hover { color: #fff; }
+
+/* 關係網畫布 */
+#relationCanvas {
+    width: 100%;
+    height: 400px;
+    background: radial-gradient(ellipse at center, #1a1c24 0%, #0d0f14 100%);
+    border-radius: 8px;
+    border: 1px solid #2a2d3a;
+}
+
+@media (min-width: 600px) {
+    #relationCanvas { height: 500px; }
+}
+
+/* NPC 詳情面板 */
+.npc-detail-panel {
+    background: rgba(25, 27, 35, 0.95);
+    border: 1px solid #3a3d4a;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    display: none;
+}
+
+.npc-detail-panel.show { display: block; }
+
+.npc-detail-panel h3 {
+    color: #d4c4a0;
+    margin: 0 0 10px 0;
+    font-size: 20px;
+}
+
+.npc-detail-panel .role {
+    color: #7a7d8a;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.npc-detail-panel .desc {
+    color: #a0a5b0;
+    line-height: 1.8;
+    font-size: 15px;
+}
+
+.npc-detail-panel .relations {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #2a2d3a;
+}
+
+.npc-detail-panel .relation-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.relation-item .target { color: #b0a080; }
+.relation-item .status { font-size: 13px; padding: 3px 10px; border-radius: 12px; }
+.relation-item .status.love { background: rgba(200, 100, 120, 0.3); color: #e0a0b0; }
+.relation-item .status.ally { background: rgba(100, 180, 120, 0.3); color: #a0d0b0; }
+.relation-item .status.neutral { background: rgba(150, 150, 150, 0.3); color: #b0b0b0; }
+.relation-item .status.rival { background: rgba(200, 150, 80, 0.3); color: #d0c090; }
+.relation-item .status.enemy { background: rgba(180, 80, 80, 0.3); color: #d0a0a0; }
+
+/* 命運干涉按鈕 */
+.fate-action-btn {
+    background: linear-gradient(135deg, #3a2a5a, #2a1a4a);
+    border: 1px solid #5a4a7a;
+    color: #c0a0e0;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    margin-top: 15px;
+    transition: all 0.3s;
+}
+
+.fate-action-btn:hover {
+    background: linear-gradient(135deg, #4a3a6a, #3a2a5a);
+    box-shadow: 0 0 20px rgba(160, 120, 200, 0.3);
+}
+
+.fate-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.fate-action-btn .cost {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* 世界觀展示 */
+.world-intro {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.world-intro h2 {
+    font-size: 32px;
+    font-weight: 900;
+    color: #c9a227;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+}
+
+.world-intro .desc {
+    font-size: 18px;
+    color: #a0a5b0;
+    line-height: 2;
+    max-width: 600px;
+    margin: 0 auto 30px;
+}
+
+.world-intro .factions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.faction-card {
+    background: rgba(30, 32, 40, 0.9);
+    border: 1px solid #3a3d4a;
+    border-radius: 8px;
+    padding: 20px;
+    width: 250px;
+    text-align: left;
+}
+
+.faction-card h4 {
+    color: #d4c4a0;
+    margin: 0 0 10px 0;
+    font-size: 18px;
+}
+
+.faction-card p {
+    color: #8a8d9a;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.start-adventure-btn {
+    background: linear-gradient(135deg, #c9a227, #a8860f);
+    border: none;
+    color: #0d0f14;
+    padding: 15px 50px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 30px;
+    transition: all 0.3s;
+    letter-spacing: 2px;
+}
+
+.start-adventure-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(201, 162, 39, 0.4);
+}
+
+/* API Key 設定 */
+.api-key-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(201, 162, 39, 0.05);
+    border: 1px solid #3a3d4a;
+    border-radius: 8px;
+}
+
+.api-key-section label {
+    display: block;
+    font-size: 14px;
+    color: #7a7d8a;
+    margin-bottom: 8px;
+}
+
+.api-key-section input {
+    width: 100%;
+    padding: 12px;
+    background: #0d0f14;
+    border: 1px solid #3a3d4a;
+    border-radius: 6px;
+    color: #d0d0d0;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.api-key-section input:focus { border-color: #c9a227; }
+
+/* 錯誤提示 */
+.error-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(180, 60, 60, 0.95);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 90%;
+    text-align: center;
+}
+
+.error-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 捲軸樣式 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0d0f14; }
+::-webkit-scrollbar-thumb { background: #3a3d4a; border-radius: 3px; }
+
+/* 角色創建表單 */
+.character-create-form {
+    padding: 10px;
+}
+
+.character-create-form .form-group {
+    margin-bottom: 20px;
+}
+
+.character-create-form label {
+    display: block;
+    font-size: 14px;
+    color: #deb887;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.character-create-form input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    background: #15171e;
+    border: 1px solid #4a4d5e;
+    border-radius: 6px;
+    color: #d8d8d0;
+    font-family: inherit;
+    font-size: 16px;
+    outline: none;
+}
+
+.character-create-form input[type="text"]:focus {
+    border-color: #deb887;
+}
+
+.character-create-form select {
+    width: 100%;
+    padding: 12px;
+    background: #15171e;
+    border: 1px solid #4a4d5e;
+    border-radius: 6px;
+    color: #d8d8d0;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+}
+
+.character-create-form select:focus {
+    border-color: #deb887;
+}
+
+.radio-group, .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.radio-item, .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #1a1c24;
+    border: 1px solid #3a3d4a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.radio-item:hover, .checkbox-item:hover {
+    border-color: #deb887;
+}
+
+.radio-item input, .checkbox-item input {
+    display: none;
+}
+
+.radio-item input:checked + span,
+.checkbox-item input:checked + span {
+    color: #deb887;
+}
+
+.radio-item:has(input:checked),
+.checkbox-item:has(input:checked) {
+    border-color: #deb887;
+    background: rgba(222, 184, 135, 0.1);
+}
+
+.radio-item span, .checkbox-item span {
+    color: #a0a5b0;
+    font-size: 14px;
+}
+
+.checkbox-item small {
+    color: #6a6d7a;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+.stat-allocator {
+    background: #15171e;
+    border: 1px solid #3a3d4a;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-name {
+    color: #d8d8d0;
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 80px;
+}
+
+.stat-desc {
+    color: #6a6d7a;
+    font-size: 12px;
+    flex: 1;
+    margin: 0 10px;
+}
+
+.stat-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid #4a4d5e;
+    background: #1a1c24;
+    color: #d8d8d0;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.stat-btn:hover {
+    border-color: #deb887;
+    color: #deb887;
+}
+
+.stat-value {
+    color: #deb887;
+    font-weight: 900;
+    font-size: 18px;
+    min-width: 24px;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .stat-row {
+        flex-wrap: wrap;
+    }
+    .stat-desc {
+        width: 100%;
+        margin: 5px 0;
+        order: 3;
+    }
+    .stat-controls {
+        margin-left: auto;
+    }
+}
+
+/* 命運長河時間線 */
+.timeline-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 20px 10px;
+}
+
+.timeline-empty {
+    text-align: center;
+    color: #6a6d7a;
+    padding: 40px;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 15px 20px;
+    margin-left: 30px;
+    border-left: 2px solid #3a3d4a;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.timeline-item:hover {
+    background: rgba(222, 184, 135, 0.05);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 20px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3a3d4a;
+    border: 2px solid #15171e;
+}
+
+.timeline-item.major::before {
+    background: linear-gradient(135deg, #deb887, #c9a227);
+    box-shadow: 0 0 10px rgba(222, 184, 135, 0.5);
+}
+
+.timeline-item.selected {
+    background: rgba(222, 184, 135, 0.1);
+    border-left-color: #deb887;
+}
+
+.timeline-date {
+    font-size: 12px;
+    color: #8f919c;
+    margin-bottom: 5px;
+}
+
+.timeline-name {
+    font-size: 15px;
+    color: #d8d8d0;
+    font-weight: 700;
+}
+
+.timeline-item.major .timeline-name {
+    color: #deb887;
+}
+
+.timeline-detail {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    display: none;
+}
+
+.timeline-detail.show {
+    display: block;
+}
+
+.timeline-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px;
+    color: #a0a5b0;
+}
+
+.timeline-detail-row span:first-child {
+    color: #6a6d7a;
+}
+
+.timeline-revert-btn {
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    background: linear-gradient(135deg, #4a3a6a, #3a2a5a);
+    border: 1px solid #5a4a7a;
+    border-radius: 6px;
+    color: #c0a0e0;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.timeline-revert-btn:hover {
+    background: linear-gradient(135deg, #5a4a7a, #4a3a6a);
+    box-shadow: 0 0 15px rgba(160, 120, 200, 0.3);
+}
+
+.timeline-revert-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.timeline-cost {
+    font-size: 12px;
+    color: #8f919c;
+}
+
+/* 擲骰檢定 Overlay */
+.dice-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.dice-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.dice-container {
+    text-align: center;
+    max-width: 400px;
+    padding: 30px;
+}
+
+.dice-title {
+    font-size: 20px;
+    color: #deb887;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.dice-attribute {
+    font-size: 14px;
+    color: #8f919c;
+    margin-bottom: 20px;
+}
+
+.dice-display {
+    font-size: 72px;
+    font-weight: 900;
+    color: #d8d8d0;
+    margin: 20px 0;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    transition: all 0.3s;
+}
+
+.dice-display.rolling {
+    animation: diceRoll 0.1s infinite;
+}
+
+.dice-display.success {
+    color: #80c090;
+    text-shadow: 0 0 30px rgba(100, 200, 140, 0.5);
+}
+
+.dice-display.failure {
+    color: #c07070;
+    text-shadow: 0 0 30px rgba(200, 100, 100, 0.5);
+}
+
+@keyframes diceRoll {
+    0% { transform: rotate(-5deg) scale(1.05); }
+    50% { transform: rotate(5deg) scale(0.95); }
+    100% { transform: rotate(-5deg) scale(1.05); }
+}
+
+.dice-threshold {
+    font-size: 14px;
+    color: #8f919c;
+    margin-bottom: 20px;
+}
+
+.dice-result-text {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 20px 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.dice-result-text.show {
+    opacity: 1;
+}
+
+.dice-result-text.success {
+    color: #80c090;
+}
+
+.dice-result-text.failure {
+    color: #c07070;
+}
+
+.dice-reroll-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.dice-reroll-section.show {
+    opacity: 1;
+}
+
+.dice-reroll-btn {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #4a3a6a, #3a2a5a);
+    border: 1px solid #5a4a7a;
+    border-radius: 8px;
+    color: #c0a0e0;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0 10px;
+}
+
+.dice-reroll-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #5a4a7a, #4a3a6a);
+    box-shadow: 0 0 15px rgba(160, 120, 200, 0.3);
+}
+
+.dice-reroll-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dice-continue-btn {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #3a4a3a, #2a3a2a);
+    border: 1px solid #4a5a4a;
+    border-radius: 8px;
+    color: #a0c0a0;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0 10px;
+}
+
+.dice-continue-btn:hover {
+    background: linear-gradient(135deg, #4a5a4a, #3a4a3a);
+}
+
+.dice-stat-bonus {
+    font-size: 12px;
+    color: #6a6d7a;
+    margin-top: 10px;
+}
