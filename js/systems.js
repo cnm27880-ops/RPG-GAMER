@@ -1,0 +1,636 @@
+// ============ 遊戲系統模組 ============
+
+// --- 1. 日曆系統 ---
+const CALENDAR = {
+    year: 1,
+    season: 0,
+    day: 1,
+    timeOfDay: 0,
+    seasonNames: ['春月', '夏月', '秋月', '冬月'],
+    dayNames: ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+               '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+               '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'],
+    timeNames: ['清晨', '上午', '午後', '黃昏', '夜晚', '深夜'],
+
+    advance(units = 1) {
+        for (let i = 0; i < units; i++) {
+            this.timeOfDay++;
+            if (this.timeOfDay >= 6) {
+                this.timeOfDay = 0;
+                this.day++;
+                if (this.day > 30) {
+                    this.day = 1;
+                    this.season++;
+                    if (this.season >= 4) {
+                        this.season = 0;
+                        this.year++;
+                    }
+                }
+            }
+        }
+        this.updateDisplay();
+    },
+
+    getString() {
+        return `第${this.year}年 ${this.seasonNames[this.season]} ${this.dayNames[this.day-1]}`;
+    },
+
+    getTimeString() {
+        return this.timeNames[this.timeOfDay];
+    },
+
+    updateDisplay() {
+        document.getElementById('calendar-date').textContent = this.getString();
+        document.getElementById('calendar-time').textContent = this.getTimeString();
+    },
+
+    reset() {
+        this.year = 1;
+        this.season = 0;
+        this.day = 1;
+        this.timeOfDay = 0;
+    }
+};
+
+// --- 2. 命運點系統 ---
+let fatePoints = 0;
+
+function addFatePoints(amount) {
+    fatePoints += amount;
+    document.getElementById('fate-value').textContent = fatePoints;
+    if (amount > 0 && typeof showFloatingText !== 'undefined') {
+        showFloatingText(`+${amount} 命運點`, canvasWidth/2, canvasHeight/2, '#c0a0e0');
+    }
+}
+
+function spendFatePoints(amount) {
+    if (fatePoints >= amount) {
+        fatePoints -= amount;
+        document.getElementById('fate-value').textContent = fatePoints;
+        return true;
+    }
+    return false;
+}
+
+// --- 3. 存檔與讀檔系統 ---
+let savePoints = [];
+const MAX_SAVE_POINTS = 50;
+let lastSavePointDay = -1;
+
+function autoSave() {
+    try {
+        const saveData = {
+            currentWorld,
+            factionData,
+            npcs,
+            relationships,
+            historyLog: historyLog.slice(-30),
+            calendar: {
+                year: CALENDAR.year,
+                season: CALENDAR.season,
+                day: CALENDAR.day,
+                timeOfDay: CALENDAR.timeOfDay
+            },
+            fatePoints,
+            storyContext,
+            playerCharacter,
+            currentState,
+            currentOptions,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('rpg_autosave', JSON.stringify(saveData));
+    } catch (e) {
+        console.warn('自動存檔失敗:', e);
+    }
+}
+
+function loadAutoSave() {
+    try {
+        const saveStr = localStorage.getItem('rpg_autosave');
+        if (!saveStr) return false;
+        const saveData = JSON.parse(saveStr);
+
+        // 還原全域變數
+        currentWorld = saveData.currentWorld;
+        factionData = saveData.factionData || [];
+        npcs = saveData.npcs || [];
+        relationships = saveData.relationships || [];
+        historyLog = saveData.historyLog || [];
+        fatePoints = saveData.fatePoints || 0;
+        storyContext = saveData.storyContext || '';
+        playerCharacter = saveData.playerCharacter;
+        currentOptions = saveData.currentOptions || [];
+
+        if (saveData.calendar) Object.assign(CALENDAR, saveData.calendar);
+
+        // 更新 UI
+        document.getElementById('calendar-display').style.display = 'block';
+        document.getElementById('fate-display').style.display = 'flex';
+        document.getElementById('fate-value').textContent = fatePoints;
+        CALENDAR.updateDisplay();
+        updateNPCBadge();
+
+        currentState = saveData.currentState;
+        if (currentState === STATE.TYPING || currentState === STATE.CHOICE) {
+            currentState = STATE.CHOICE;
+            generateOptionsUI();
+            // 【修復】這裡不能用 window.typewriter
+            if(typeof typewriter !== 'undefined') {
+                typewriter.text = storyContext;
+                typewriter.idx = storyContext.length;
+                typewriter.done = true;
+            }
+        }
+        if(typeof showFloatingText !== 'undefined') showFloatingText('讀取存檔成功', canvasWidth/2, canvasHeight/2, '#80c090');
+        return true;
+    } catch (e) {
+        console.error('讀取存檔失敗:', e);
+        return false;
+    }
+}
+
+function checkAutoSave() {
+    const saveStr = localStorage.getItem('rpg_autosave');
+    if (!saveStr) return;
+    try {
+        const saveData = JSON.parse(saveStr);
+        const timestamp = new Date(saveData.timestamp);
+        const worldName = saveData.currentWorld?.name || '未知世界';
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay show';
+        overlay.id = 'autosave-modal';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width:450px;text-align:center;">
+                <div class="modal-title">發 現 未 完 成 的 冒 險</div>
+                <div style="color:#a0a5b0;margin-bottom:20px;line-height:1.8;">
+                    <p>世界：<span style="color:#deb887;">${worldName}</span></p>
+                    <p>存檔時間：${timestamp.toLocaleString()}</p>
+                </div>
+                <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;">
+                    <button class="start-adventure-btn" onclick="continueAutoSave()">繼續冒險</button>
+                    <button class="start-adventure-btn" style="background:linear-gradient(135deg,#4a4a4a,#3a3a3a);color:#d0d0d0;" onclick="startNewGame()">重新開始</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+    } catch (e) {}
+}
+
+function continueAutoSave() {
+    document.getElementById('autosave-modal')?.remove();
+    loadAutoSave();
+}
+
+function startNewGame() {
+    document.getElementById('autosave-modal')?.remove();
+    clearAutoSave();
+    if (!apiKey) toggleSettingsModal(true);
+    else startWorldGeneration();
+}
+
+function clearAutoSave() {
+    localStorage.removeItem('rpg_autosave');
+    if(typeof showFloatingText !== 'undefined') showFloatingText('存檔已清除', canvasWidth/2, canvasHeight/2, '#c07070');
+}
+
+// 存檔點與回溯系統
+function createSavePoint(name, isMajor = false) {
+    const snapshot = {
+        currentWorld: JSON.parse(JSON.stringify(currentWorld)),
+        factionData: JSON.parse(JSON.stringify(factionData)),
+        npcs: JSON.parse(JSON.stringify(npcs)),
+        relationships: JSON.parse(JSON.stringify(relationships)),
+        historyLog: JSON.parse(JSON.stringify(historyLog)),
+        calendar: { ...CALENDAR },
+        fatePoints,
+        storyContext,
+        playerCharacter: JSON.parse(JSON.stringify(playerCharacter)),
+        currentOptions: JSON.parse(JSON.stringify(currentOptions))
+    };
+    const savePoint = {
+        id: `sp_${Date.now()}`,
+        name: name || `${CALENDAR.getString()} - ${storyContext.slice(0, 10)}...`,
+        timestamp: Date.now(),
+        calendarString: `${CALENDAR.getString()} ${CALENDAR.getTimeString()}`,
+        snapshot,
+        isMajor
+    };
+    savePoints.push(savePoint);
+    while (savePoints.length > MAX_SAVE_POINTS) {
+        const idx = savePoints.findIndex(sp => !sp.isMajor);
+        if (idx >= 0) savePoints.splice(idx, 1);
+        else savePoints.shift();
+    }
+    localStorage.setItem('rpg_savepoints', JSON.stringify(savePoints));
+}
+
+function loadSavePointsFromStorage() {
+    try {
+        const data = localStorage.getItem('rpg_savepoints');
+        if (data) savePoints = JSON.parse(data);
+    } catch (e) { savePoints = []; }
+}
+
+function checkAndCreateSavePoint(triggerType, eventName = '') {
+    let isMajor = false, name = '';
+    switch (triggerType) {
+        case 'risk': name = `${CALENDAR.getString()} - 冒險抉擇`; break;
+        case 'fate': name = `${CALENDAR.getString()} - ${eventName || '命運事件'}`; isMajor = true; break;
+        case 'newNPC': name = `${CALENDAR.getString()} - 遇見${eventName}`; break;
+        case 'monthly':
+            const totalDays = (CALENDAR.year - 1) * 120 + CALENDAR.season * 30 + CALENDAR.day;
+            if (Math.floor(totalDays / 30) !== Math.floor(lastSavePointDay / 30)) {
+                name = `${CALENDAR.getString()} - 月末紀錄`;
+                lastSavePointDay = totalDays;
+            } else return;
+            break;
+    }
+    if (name) createSavePoint(name, isMajor);
+}
+
+function revertToSavePoint(savePointId) {
+    const savePoint = savePoints.find(sp => sp.id === savePointId);
+    if (!savePoint) return showError('存檔點不存在');
+    const cost = savePoint.isMajor ? 8 : 5;
+    if (fatePoints < cost) return showError(`命運點不足（需要 ${cost} 點）`);
+    if (!confirm(`回溯將抹除此節點之後的所有記憶，消耗 ${cost} 命運點。是否確定？`)) return;
+
+    spendFatePoints(cost);
+    const s = savePoint.snapshot;
+    currentWorld = s.currentWorld;
+    factionData = s.factionData;
+    npcs = s.npcs;
+    relationships = s.relationships;
+    historyLog = s.historyLog;
+    Object.assign(CALENDAR, s.calendar);
+    fatePoints = s.fatePoints;
+    storyContext = s.storyContext;
+    playerCharacter = s.playerCharacter;
+    currentOptions = s.currentOptions;
+
+    const index = savePoints.findIndex(sp => sp.id === savePointId);
+    if (index >= 0) savePoints = savePoints.slice(0, index + 1);
+
+    historyLog.push({ role: 'Fate', text: `【命運回溯】時間倒流至「${savePoint.name}」` });
+    CALENDAR.updateDisplay();
+    document.getElementById('fate-value').textContent = fatePoints;
+    updateNPCBadge();
+    localStorage.setItem('rpg_savepoints', JSON.stringify(savePoints));
+    toggleTimelineModal(false);
+    if(typeof showFloatingText !== 'undefined') showFloatingText('命運之輪逆轉...', canvasWidth/2, canvasHeight/2, '#c0a0e0');
+
+    currentState = STATE.CHOICE;
+    generateOptionsUI();
+    if(typeof typewriter !== 'undefined') {
+        typewriter.text = storyContext;
+        typewriter.idx = storyContext.length;
+        typewriter.done = true;
+    }
+}
+
+// --- 4. 擲骰系統 ---
+const DICE_REROLL_COST = 3;
+let currentDiceCheck = null;
+let diceCheckCallback = null;
+const STAT_NAMES = { strength: '力量', wisdom: '智慧', charisma: '魅力', luck: '運氣' };
+
+function calculateDiceThreshold(difficulty, statValue) {
+    const baseDifficulty = { easy: 6, normal: 8, hard: 10, extreme: 12 };
+    const threshold = (baseDifficulty[difficulty] || 8) - Math.floor(statValue / 2);
+    return Math.max(2, Math.min(12, threshold));
+}
+
+function rollD12() { return Math.floor(Math.random() * 12) + 1; }
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function performDiceCheck(title, stat, difficulty, onComplete) {
+    const statValue = playerCharacter.stats[stat] || 0;
+    const threshold = calculateDiceThreshold(difficulty, statValue);
+    currentDiceCheck = { title, stat, difficulty, threshold, statValue, result: null, success: false, rerolled: false };
+    diceCheckCallback = onComplete;
+
+    document.getElementById('dice-title').textContent = title;
+    document.getElementById('dice-attribute').textContent = `${STAT_NAMES[stat] || stat} 檢定`;
+    document.getElementById('dice-threshold').textContent = `目標：${threshold} 以上`;
+    document.getElementById('dice-stat-bonus').textContent = statValue > 0 ? `(${STAT_NAMES[stat]} ${statValue} → 難度 -${Math.floor(statValue/2)})` : '';
+    document.getElementById('dice-result-text').className = 'dice-result-text';
+    document.getElementById('dice-reroll-section').className = 'dice-reroll-section';
+    document.getElementById('dice-display').textContent = '?';
+    document.getElementById('dice-display').className = 'dice-display';
+    document.getElementById('dice-overlay').classList.add('show');
+    await animateDiceRoll();
+}
+
+async function animateDiceRoll() {
+    const display = document.getElementById('dice-display');
+    display.classList.add('rolling');
+    for (let i = 0; i < 15; i++) {
+        display.textContent = rollD12();
+        await sleep(80 + i * 10);
+    }
+    display.classList.remove('rolling');
+    const finalResult = rollD12();
+    display.textContent = finalResult;
+    currentDiceCheck.result = finalResult;
+    currentDiceCheck.success = finalResult >= currentDiceCheck.threshold;
+    await sleep(300);
+
+    const resultText = document.getElementById('dice-result-text');
+    if (currentDiceCheck.success) {
+        display.classList.add('success');
+        resultText.textContent = '成功！';
+        resultText.classList.add('success');
+    } else {
+        display.classList.add('failure');
+        resultText.textContent = '失敗...';
+        resultText.classList.add('failure');
+    }
+    resultText.classList.add('show');
+    await sleep(500);
+
+    const rerollBtn = document.getElementById('dice-reroll-btn');
+    const canReroll = !currentDiceCheck.success && fatePoints >= DICE_REROLL_COST && !currentDiceCheck.rerolled;
+    rerollBtn.disabled = !canReroll;
+    rerollBtn.textContent = canReroll ? `✧ 命運介入 (${DICE_REROLL_COST}點)` : (currentDiceCheck.rerolled ? '已使用命運介入' : `命運點不足 (${DICE_REROLL_COST}點)`);
+    document.getElementById('dice-reroll-section').classList.add('show');
+}
+
+async function rerollDice() {
+    if (!currentDiceCheck || currentDiceCheck.rerolled || fatePoints < DICE_REROLL_COST) return;
+    spendFatePoints(DICE_REROLL_COST);
+    currentDiceCheck.rerolled = true;
+    
+    document.getElementById('dice-display').className = 'dice-display';
+    document.getElementById('dice-result-text').className = 'dice-result-text';
+    document.getElementById('dice-reroll-section').className = 'dice-reroll-section';
+    if(typeof showFloatingText !== 'undefined') showFloatingText('命運之輪轉動...', canvasWidth/2, canvasHeight/2, '#c0a0e0');
+
+    const luckBonus = playerCharacter.stats.luck || 0;
+    const adjustedThreshold = Math.max(2, currentDiceCheck.threshold - Math.floor(luckBonus / 3));
+    currentDiceCheck.threshold = adjustedThreshold;
+    document.getElementById('dice-threshold').textContent = `目標：${adjustedThreshold} 以上`;
+    if (luckBonus > 0) document.getElementById('dice-stat-bonus').textContent += ` (運氣介入)`;
+
+    await sleep(500);
+    await animateDiceRoll();
+}
+
+function continueDiceResult() {
+    document.getElementById('dice-overlay').classList.remove('show');
+    if (diceCheckCallback) {
+        diceCheckCallback(currentDiceCheck);
+        diceCheckCallback = null;
+    }
+    currentDiceCheck = null;
+}
+
+// --- 5. 角色與 NPC 系統 ---
+let npcs = [];
+let relationships = [];
+let playerCharacter = {
+    id: 'player', name: '旅人', role: '命運的見證者', desc: '你，一個踏入這個世界的旅人。',
+    faction: -1, x: 0, y: 0, known: true,
+    gender: '不指定', stats: { strength: 0, wisdom: 0, charisma: 0, luck: 0 },
+    background: 'wanderer', traits: []
+};
+
+// 角色創建變數
+let tempStats = { strength: 0, wisdom: 0, charisma: 0, luck: 0 };
+let statPointsRemaining = 10;
+const BACKGROUND_INFO = {
+    wanderer: { name: '流浪者', desc: '無初始陣營傾向', factionBonus: -1 },
+    noble: { name: '沒落貴族', desc: '第一陣營 +15', factionBonus: 0 },
+    merchant: { name: '商人之子', desc: '第二陣營 +15', factionBonus: 1 },
+    temple: { name: '神殿孤兒', desc: '第三陣營 +15', factionBonus: 2 },
+    mystery: { name: '神秘來歷', desc: '隨機屬性 +3', factionBonus: -1 }
+};
+const TRAIT_INFO = {
+    cautious: { name: '謹慎', effect: 'risk選項較少' },
+    reckless: { name: '魯莽', effect: 'risk選項較多' },
+    curious: { name: '好奇', effect: 'focus選項較多' },
+    practical: { name: '務實', effect: 'normal選項較多' }
+};
+
+function adjustStat(stat, delta) {
+    const newValue = tempStats[stat] + delta;
+    if (newValue < 0 || (delta > 0 && statPointsRemaining <= 0) || newValue > 10) return;
+    tempStats[stat] = newValue;
+    statPointsRemaining -= delta;
+    document.getElementById(`stat-${stat}`).textContent = newValue;
+    document.getElementById('stat-points-remaining').textContent = `(剩餘點數: ${statPointsRemaining})`;
+}
+
+function resetCharacterForm() {
+    tempStats = { strength: 0, wisdom: 0, charisma: 0, luck: 0 };
+    statPointsRemaining = 10;
+    document.getElementById('char-name').value = '';
+    document.querySelectorAll('input[name="gender"]')[0].checked = true;
+    document.getElementById('char-background').value = 'wanderer';
+    document.querySelectorAll('input[name="trait"]').forEach(cb => cb.checked = false);
+    ['strength', 'wisdom', 'charisma', 'luck'].forEach(s => document.getElementById(`stat-${s}`).textContent = '0');
+    document.getElementById('stat-points-remaining').textContent = '(剩餘點數: 10)';
+}
+
+function confirmCharacterCreation() {
+    const name = document.getElementById('char-name').value.trim() || '無名旅人';
+    const gender = document.querySelector('input[name="gender"]:checked').value;
+    const background = document.getElementById('char-background').value;
+    const traits = Array.from(document.querySelectorAll('input[name="trait"]:checked')).slice(0, 2).map(cb => cb.value);
+
+    let finalStats = { ...tempStats };
+    if (background === 'mystery') {
+        const keys = ['strength', 'wisdom', 'charisma', 'luck'];
+        const rnd = keys[Math.floor(Math.random() * keys.length)];
+        finalStats[rnd] += 3;
+    }
+
+    playerCharacter.name = name;
+    playerCharacter.gender = gender;
+    playerCharacter.stats = finalStats;
+    playerCharacter.background = background;
+    playerCharacter.traits = traits;
+    playerCharacter.desc = `${name}，${gender}，${BACKGROUND_INFO[background].name}出身。`;
+
+    if(typeof toggleCharacterCreateModal !== 'undefined') toggleCharacterCreateModal(false);
+    if(typeof startAdventureWithCharacter !== 'undefined') startAdventureWithCharacter();
+}
+
+function getCharacterPromptString() {
+    const bg = BACKGROUND_INFO[playerCharacter.background];
+    const traitsStr = playerCharacter.traits.map(t => TRAIT_INFO[t]?.name).filter(Boolean).join('、') || '無';
+    return `主角：${playerCharacter.name}，${playerCharacter.gender}，${bg.name}。性格：${traitsStr}。屬性：力${playerCharacter.stats.strength}/智${playerCharacter.stats.wisdom}/魅${playerCharacter.stats.charisma}/運${playerCharacter.stats.luck}`;
+}
+
+function getTraitOptionModifiers() {
+    const m = { risk: 1, focus: 1, normal: 1 };
+    playerCharacter.traits.forEach(t => {
+        if(t==='cautious') m.risk*=0.5;
+        if(t==='reckless') m.risk*=1.5;
+        if(t==='curious') m.focus*=1.5;
+        if(t==='practical') m.normal*=1.5;
+    });
+    return m;
+}
+
+// NPC 管理函數
+function addNPC(npc) {
+    if (!npcs.find(n => n.id === npc.id)) {
+        npc.known = true;
+        npc.status = npc.status || 'active';
+        npc.x = Math.random() * 300 - 150;
+        npc.y = Math.random() * 300 - 150;
+        npcs.push(npc);
+        updateNPCBadge();
+        if(typeof showFloatingText !== 'undefined') showFloatingText(`遇見了 ${npc.name}`, canvasWidth/2, 100, '#d4c4a0');
+    }
+}
+
+function updateNPCStatus(npcId, newStatus, reason) {
+    const npc = npcs.find(n => n.id === npcId);
+    if (npc && npc.status !== newStatus) {
+        const oldStatus = npc.status;
+        npc.status = newStatus;
+        historyLog.push({ role: 'Status', text: `【狀態變更】${npc.name}：${oldStatus} → ${newStatus}${reason ? `（${reason}）` : ''}` });
+    }
+}
+
+function addRelationship(fromId, toId, type, revealed = false) {
+    if(!relationships.find(r => (r.from===fromId && r.to===toId) || (r.from===toId && r.to===fromId))) {
+        relationships.push({ from: fromId, to: toId, type, revealed });
+    }
+}
+
+function revealRelationship(fromId, toId) {
+    const rel = relationships.find(r => (r.from===fromId && r.to===toId) || (r.from===toId && r.to===fromId));
+    if (rel && !rel.revealed) { rel.revealed = true; return true; }
+    return false;
+}
+
+function updateNPCBadge() {
+    const badge = document.getElementById('npc-count');
+    if (npcs.length > 0) { badge.textContent = npcs.length; badge.style.display = 'flex'; }
+    else badge.style.display = 'none';
+}
+
+// 關係網視覺化 (Canvas繪製)
+let relationCanvas, relationCtx;
+let selectedNPC = null;
+let relationDragging = null;
+let relationOffset = { x: 0, y: 0 };
+
+function initRelationCanvas() {
+    relationCanvas = document.getElementById('relationCanvas');
+    relationCtx = relationCanvas.getContext('2d');
+    const rect = relationCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    relationCanvas.width = rect.width * dpr;
+    relationCanvas.height = rect.height * dpr;
+    relationCtx.scale(dpr, dpr);
+
+    relationCanvas.onmousedown = onRelationMouseDown;
+    relationCanvas.onmousemove = onRelationMouseMove;
+    relationCanvas.onmouseup = onRelationMouseUp;
+    relationCanvas.ontouchstart = (e) => { e.preventDefault(); onRelationMouseDown(e); };
+    relationCanvas.ontouchmove = (e) => { e.preventDefault(); onRelationMouseMove(e); };
+    relationCanvas.ontouchend = (e) => { e.preventDefault(); onRelationMouseUp(e); };
+}
+
+function getRelationCanvasCoords(e) {
+    const rect = relationCanvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    return { x, y };
+}
+
+function onRelationMouseDown(e) {
+    const { x, y } = getRelationCanvasCoords(e);
+    const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
+    const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
+    
+    // 檢查節點點擊
+    let nodes = [playerCharacter, ...npcs];
+    for(let n of nodes) {
+        let nx = centerX + n.x, ny = centerY + n.y;
+        if(Math.hypot(x - nx, y - ny) < 35) {
+            relationDragging = n;
+            relationOffset = { x: x - nx, y: y - ny };
+            return;
+        }
+    }
+}
+
+function onRelationMouseMove(e) {
+    if(relationDragging) {
+        const { x, y } = getRelationCanvasCoords(e);
+        const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
+        const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
+        relationDragging.x = x - centerX - relationOffset.x;
+        relationDragging.y = y - centerY - relationOffset.y;
+        drawRelationNetwork();
+    }
+}
+
+function onRelationMouseUp(e) {
+    if(relationDragging) {
+        const { x, y } = getRelationCanvasCoords(e);
+        const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
+        const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
+        let dist = Math.hypot(x - (centerX + relationDragging.x), y - (centerY + relationDragging.y));
+        if(dist < 5) { // 視為點擊
+            selectedNPC = relationDragging;
+            showNPCDetail(selectedNPC);
+        }
+        relationDragging = null;
+    }
+}
+
+function drawRelationNetwork() {
+    if (!relationCtx) return;
+    const w = relationCanvas.width / (window.devicePixelRatio || 1);
+    const h = relationCanvas.height / (window.devicePixelRatio || 1);
+    const cx = w / 2, cy = h / 2;
+
+    relationCtx.fillStyle = '#0d0f14';
+    relationCtx.fillRect(0, 0, w, h);
+    
+    // 繪製連線
+    relationships.forEach(rel => {
+        if (!rel.revealed) return;
+        let f = rel.from==='player'?playerCharacter:npcs.find(n=>n.id===rel.from);
+        let t = rel.to==='player'?playerCharacter:npcs.find(n=>n.id===rel.to);
+        if(f && t) {
+            const color = CONFIG.colors.relationColors[rel.type] || '#fff';
+            relationCtx.strokeStyle = color;
+            relationCtx.lineWidth = 2;
+            relationCtx.beginPath();
+            relationCtx.moveTo(cx+f.x, cy+f.y);
+            relationCtx.lineTo(cx+t.x, cy+t.y);
+            relationCtx.stroke();
+        }
+    });
+
+    // 繪製節點
+    [playerCharacter, ...npcs].forEach(n => {
+        const x = cx + n.x, y = cy + n.y;
+        const r = n.id === 'player' ? 35 : 28;
+        relationCtx.beginPath();
+        relationCtx.arc(x, y, r, 0, Math.PI*2);
+        relationCtx.fillStyle = '#2a2d3a';
+        relationCtx.fill();
+        relationCtx.strokeStyle = n === selectedNPC ? '#c9a227' : '#5a5d6a';
+        relationCtx.lineWidth = 2;
+        relationCtx.stroke();
+        
+        relationCtx.fillStyle = '#fff';
+        relationCtx.textAlign = 'center';
+        relationCtx.textBaseline = 'middle';
+        relationCtx.fillText(n.name, x, y + r + 15);
+    });
+}
+
+function showNPCDetail(node) {
+    const panel = document.getElementById('npc-detail');
+    if (!node) return panel.classList.remove('show');
+    let html = `<h3>${node.name}</h3><div class="desc">${node.desc||'無描述'}</div>`;
+    panel.innerHTML = html;
+    panel.classList.add('show');
+}
