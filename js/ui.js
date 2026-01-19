@@ -203,7 +203,15 @@ function drawFactionHUD() {
 // 模態視窗開關
 function toggleRelationModal(show) {
     document.getElementById('relation-modal').classList.toggle('show', show);
-    if (show) { initRelationCanvas(); drawRelationNetwork(); }
+    if (show) {
+        initRelationCanvas();
+        drawRelationNetwork();
+    } else {
+        // 關閉時停止動畫以節省資源
+        if (typeof stopRelationAnimation === 'function') {
+            stopRelationAnimation();
+        }
+    }
 }
 function toggleLogModal(show) { document.getElementById('log-modal').classList.toggle('show', show); }
 function toggleSettingsModal(show) {

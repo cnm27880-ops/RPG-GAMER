@@ -223,48 +223,99 @@ body, html {
 /* 關係網畫布 */
 #relationCanvas {
     width: 100%;
-    height: 400px;
+    height: 450px;
     background: radial-gradient(ellipse at center, #1a1c24 0%, #0d0f14 100%);
-    border-radius: 8px;
-    border: 1px solid #2a2d3a;
+    border-radius: 12px;
+    border: 1px solid #3a3d4a;
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
 }
 
 @media (min-width: 600px) {
-    #relationCanvas { height: 500px; }
+    #relationCanvas { height: 520px; }
+}
+
+/* 關係網 Modal 特殊樣式 */
+#relation-modal .modal-content {
+    max-width: 950px;
+    background: linear-gradient(180deg, #15171e 0%, #0d0f12 100%);
+}
+
+#relation-modal .modal-title {
+    background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.1), transparent);
+    padding: 15px 0 20px;
+    margin: -20px -20px 20px;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.2);
+}
+
+@media (min-width: 600px) {
+    #relation-modal .modal-title {
+        margin: -30px -30px 20px;
+    }
 }
 
 /* NPC 詳情面板 */
 .npc-detail-panel {
-    background: rgba(25, 27, 35, 0.95);
+    background: linear-gradient(135deg, rgba(25, 27, 35, 0.98), rgba(18, 20, 26, 0.98));
     border: 1px solid #3a3d4a;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 20px 25px;
     margin-top: 20px;
     display: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-.npc-detail-panel.show { display: block; }
+.npc-detail-panel.show {
+    display: block;
+    animation: panelSlideIn 0.3s ease;
+}
+
+@keyframes panelSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 .npc-detail-panel h3 {
-    color: #d4c4a0;
-    margin: 0 0 10px 0;
-    font-size: 20px;
+    color: #deb887;
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.npc-detail-panel h3::before {
+    content: '◆';
+    font-size: 10px;
+    color: #c9a227;
 }
 
 .npc-detail-panel .role {
-    color: #7a7d8a;
-    font-size: 14px;
+    color: #8f919c;
+    font-size: 13px;
     margin-bottom: 15px;
+    padding-left: 20px;
+    font-style: italic;
 }
 
 .npc-detail-panel .desc {
-    color: #a0a5b0;
-    line-height: 1.8;
+    color: #b0b5c0;
+    line-height: 1.9;
     font-size: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border-left: 3px solid #3a3d4a;
 }
 
 .npc-detail-panel .relations {
-    margin-top: 15px;
+    margin-top: 20px;
     padding-top: 15px;
     border-top: 1px solid #2a2d3a;
 }
@@ -273,17 +324,59 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 10px 12px;
+    margin: 5px 0;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: background 0.2s;
 }
 
-.relation-item .target { color: #b0a080; }
-.relation-item .status { font-size: 13px; padding: 3px 10px; border-radius: 12px; }
-.relation-item .status.love { background: rgba(200, 100, 120, 0.3); color: #e0a0b0; }
-.relation-item .status.ally { background: rgba(100, 180, 120, 0.3); color: #a0d0b0; }
-.relation-item .status.neutral { background: rgba(150, 150, 150, 0.3); color: #b0b0b0; }
-.relation-item .status.rival { background: rgba(200, 150, 80, 0.3); color: #d0c090; }
-.relation-item .status.enemy { background: rgba(180, 80, 80, 0.3); color: #d0a0a0; }
+.npc-detail-panel .relation-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.relation-item .target {
+    color: #c0b090;
+    font-weight: 500;
+}
+
+.relation-item .status {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+.relation-item .status.love {
+    background: linear-gradient(135deg, rgba(224, 128, 144, 0.3), rgba(200, 100, 120, 0.2));
+    color: #f0b0c0;
+    border: 1px solid rgba(224, 128, 144, 0.3);
+}
+
+.relation-item .status.ally {
+    background: linear-gradient(135deg, rgba(128, 192, 144, 0.3), rgba(100, 180, 120, 0.2));
+    color: #b0e0c0;
+    border: 1px solid rgba(128, 192, 144, 0.3);
+}
+
+.relation-item .status.neutral {
+    background: linear-gradient(135deg, rgba(144, 144, 144, 0.3), rgba(120, 120, 120, 0.2));
+    color: #c0c0c0;
+    border: 1px solid rgba(144, 144, 144, 0.3);
+}
+
+.relation-item .status.rival {
+    background: linear-gradient(135deg, rgba(192, 160, 96, 0.3), rgba(180, 140, 80, 0.2));
+    color: #e0d0a0;
+    border: 1px solid rgba(192, 160, 96, 0.3);
+}
+
+.relation-item .status.enemy {
+    background: linear-gradient(135deg, rgba(192, 112, 112, 0.3), rgba(180, 80, 80, 0.2));
+    color: #e0b0b0;
+    border: 1px solid rgba(192, 112, 112, 0.3);
+}
 
 /* 命運干涉按鈕 */
 .fate-action-btn {
@@ -628,84 +721,120 @@ body, html {
 .timeline-container {
     max-height: 500px;
     overflow-y: auto;
-    padding: 20px 10px;
+    padding: 20px 15px;
 }
 
 .timeline-empty {
     text-align: center;
     color: #6a6d7a;
-    padding: 40px;
+    padding: 60px 40px;
+    font-style: italic;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px dashed #3a3d4a;
 }
 
 .timeline-item {
     position: relative;
-    padding: 15px 20px;
+    padding: 18px 22px;
     margin-left: 30px;
     border-left: 2px solid #3a3d4a;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    border-radius: 0 8px 8px 0;
 }
 
 .timeline-item:hover {
-    background: rgba(222, 184, 135, 0.05);
+    background: linear-gradient(90deg, rgba(222, 184, 135, 0.08), transparent);
+    border-left-color: #5a5d6a;
 }
 
 .timeline-item::before {
     content: '';
     position: absolute;
-    left: -8px;
-    top: 20px;
-    width: 14px;
-    height: 14px;
+    left: -9px;
+    top: 22px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #3a3d4a;
-    border: 2px solid #15171e;
+    border: 3px solid #15171e;
+    transition: all 0.3s ease;
+}
+
+.timeline-item:hover::before {
+    transform: scale(1.2);
 }
 
 .timeline-item.major::before {
     background: linear-gradient(135deg, #deb887, #c9a227);
-    box-shadow: 0 0 10px rgba(222, 184, 135, 0.5);
+    box-shadow: 0 0 15px rgba(222, 184, 135, 0.6);
+    animation: majorPulse 2s ease-in-out infinite;
+}
+
+@keyframes majorPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(222, 184, 135, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(222, 184, 135, 0.8); }
 }
 
 .timeline-item.selected {
-    background: rgba(222, 184, 135, 0.1);
+    background: linear-gradient(90deg, rgba(222, 184, 135, 0.15), rgba(222, 184, 135, 0.05));
     border-left-color: #deb887;
+}
+
+.timeline-item.selected::before {
+    transform: scale(1.3);
 }
 
 .timeline-date {
     font-size: 12px;
-    color: #8f919c;
-    margin-bottom: 5px;
+    color: #7a7d8a;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
 }
 
 .timeline-name {
-    font-size: 15px;
+    font-size: 16px;
     color: #d8d8d0;
     font-weight: 700;
+    line-height: 1.4;
 }
 
 .timeline-item.major .timeline-name {
     color: #deb887;
+    text-shadow: 0 0 10px rgba(222, 184, 135, 0.3);
 }
 
 .timeline-detail {
     margin-top: 15px;
-    padding: 15px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 8px;
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+    border-radius: 10px;
     display: none;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
 .timeline-detail.show {
     display: block;
+    animation: detailFadeIn 0.3s ease;
+}
+
+@keyframes detailFadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .timeline-detail-row {
     display: flex;
     justify-content: space-between;
-    padding: 5px 0;
+    padding: 8px 0;
     font-size: 13px;
     color: #a0a5b0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.timeline-detail-row:last-of-type {
+    border-bottom: none;
 }
 
 .timeline-detail-row span:first-child {

@@ -183,6 +183,7 @@ function continueAutoSave() {
 function startNewGame() {
     document.getElementById('autosave-modal')?.remove();
     clearAutoSave();
+    clearSavePoints();  // 清空命運長河（存檔點）
     if (!apiKey) toggleSettingsModal(true);
     else startWorldGeneration();
 }
@@ -190,6 +191,13 @@ function startNewGame() {
 function clearAutoSave() {
     localStorage.removeItem('rpg_autosave');
     if(typeof showFloatingText !== 'undefined') showFloatingText('存檔已清除', canvasWidth/2, canvasHeight/2, '#c07070');
+}
+
+// 清空存檔點（命運長河）
+function clearSavePoints() {
+    savePoints = [];
+    lastSavePointDay = -1;
+    localStorage.removeItem('rpg_savepoints');
 }
 
 // 存檔點與回溯系統
@@ -511,11 +519,13 @@ function updateNPCBadge() {
     else badge.style.display = 'none';
 }
 
-// 關係網視覺化 (Canvas繪製)
+// 關係網視覺化 (Canvas繪製) - 增強網狀視覺效果
 let relationCanvas, relationCtx;
 let selectedNPC = null;
 let relationDragging = null;
 let relationOffset = { x: 0, y: 0 };
+let relationAnimFrame = null;
+let relationTime = 0;
 
 function initRelationCanvas() {
     relationCanvas = document.getElementById('relationCanvas');
@@ -527,6 +537,9 @@ function initRelationCanvas() {
     relationCanvas.width = rect.width * dpr;
     relationCanvas.height = rect.height * dpr;
     relationCtx.scale(dpr, dpr);
+
+    // 初始化節點位置（圓形佈局）
+    initNodePositions();
 
     // 移除舊的事件監聽器（避免重複綁定）
     relationCanvas.onmousedown = null;
@@ -560,6 +573,49 @@ function initRelationCanvas() {
         e.preventDefault();
         onRelationMouseUp(e);
     };
+
+    // 啟動動畫循環
+    if (relationAnimFrame) cancelAnimationFrame(relationAnimFrame);
+    animateRelationNetwork();
+}
+
+// 初始化節點位置 - 使用圓形佈局
+function initNodePositions() {
+    const nodes = npcs.filter(n => n.known !== false);
+    const count = nodes.length;
+
+    // 玩家固定在中心
+    playerCharacter.x = 0;
+    playerCharacter.y = 0;
+
+    if (count === 0) return;
+
+    // NPC 圍繞玩家呈圓形分佈
+    const baseRadius = Math.min(150, 80 + count * 15);
+    nodes.forEach((node, i) => {
+        // 如果節點已有有效位置，保留它
+        if (node.x !== undefined && node.y !== undefined &&
+            (Math.abs(node.x) > 10 || Math.abs(node.y) > 10)) return;
+
+        const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+        node.x = Math.cos(angle) * baseRadius;
+        node.y = Math.sin(angle) * baseRadius;
+    });
+}
+
+// 動畫循環
+function animateRelationNetwork() {
+    relationTime += 0.016;
+    drawRelationNetwork();
+    relationAnimFrame = requestAnimationFrame(animateRelationNetwork);
+}
+
+// 停止動畫（當 modal 關閉時調用）
+function stopRelationAnimation() {
+    if (relationAnimFrame) {
+        cancelAnimationFrame(relationAnimFrame);
+        relationAnimFrame = null;
+    }
 }
 
 function getRelationCanvasCoords(e) {
@@ -622,48 +678,243 @@ function drawRelationNetwork() {
     const h = relationCanvas.height / (window.devicePixelRatio || 1);
     const cx = w / 2, cy = h / 2;
 
-    relationCtx.fillStyle = '#0d0f14';
+    // 繪製背景漸層
+    const bgGrad = relationCtx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.7);
+    bgGrad.addColorStop(0, '#1a1c24');
+    bgGrad.addColorStop(0.5, '#12141a');
+    bgGrad.addColorStop(1, '#0a0c10');
+    relationCtx.fillStyle = bgGrad;
     relationCtx.fillRect(0, 0, w, h);
-    
-    // 繪製連線
+
+    // 繪製背景網格線（增加網狀感）
+    drawWebBackground(cx, cy, w, h);
+
+    // 繪製關係連線（帶動畫效果）
     relationships.forEach(rel => {
         if (!rel.revealed) return;
-        let f = rel.from==='player'?playerCharacter:npcs.find(n=>n.id===rel.from);
-        let t = rel.to==='player'?playerCharacter:npcs.find(n=>n.id===rel.to);
-        if(f && t) {
-            const color = CONFIG.colors.relationColors[rel.type] || '#fff';
-            relationCtx.strokeStyle = color;
-            relationCtx.lineWidth = 2;
-            relationCtx.beginPath();
-            relationCtx.moveTo(cx+f.x, cy+f.y);
-            relationCtx.lineTo(cx+t.x, cy+t.y);
-            relationCtx.stroke();
+        let f = rel.from === 'player' ? playerCharacter : npcs.find(n => n.id === rel.from);
+        let t = rel.to === 'player' ? playerCharacter : npcs.find(n => n.id === rel.to);
+        if (f && t) {
+            drawRelationLine(cx + f.x, cy + f.y, cx + t.x, cy + t.y, rel.type);
+        }
+    });
+
+    // 繪製從玩家到所有 NPC 的潛在連線（淡色虛線）
+    npcs.forEach(npc => {
+        if (npc.known === false) return;
+        const hasRelation = relationships.some(r =>
+            r.revealed && ((r.from === 'player' && r.to === npc.id) || (r.to === 'player' && r.from === npc.id))
+        );
+        if (!hasRelation) {
+            drawPotentialLine(cx, cy, cx + npc.x, cy + npc.y);
         }
     });
 
     // 繪製節點
-    [playerCharacter, ...npcs].forEach(n => {
+    const allNodes = [playerCharacter, ...npcs.filter(n => n.known !== false)];
+    allNodes.forEach(n => {
         const x = cx + n.x, y = cy + n.y;
-        const r = n.id === 'player' ? 35 : 28;
-        relationCtx.beginPath();
-        relationCtx.arc(x, y, r, 0, Math.PI*2);
-        relationCtx.fillStyle = '#2a2d3a';
-        relationCtx.fill();
-        relationCtx.strokeStyle = n === selectedNPC ? '#c9a227' : '#5a5d6a';
-        relationCtx.lineWidth = 2;
-        relationCtx.stroke();
-        
-        relationCtx.fillStyle = '#fff';
-        relationCtx.textAlign = 'center';
-        relationCtx.textBaseline = 'middle';
-        relationCtx.fillText(n.name, x, y + r + 15);
+        const isPlayer = n.id === 'player';
+        const isSelected = n === selectedNPC;
+        drawNode(x, y, n, isPlayer, isSelected);
     });
+}
+
+// 繪製背景網格（蜘蛛網效果）
+function drawWebBackground(cx, cy, w, h) {
+    relationCtx.save();
+    relationCtx.globalAlpha = 0.08;
+    relationCtx.strokeStyle = '#4a5568';
+    relationCtx.lineWidth = 1;
+
+    // 繪製同心圓
+    for (let r = 50; r < Math.max(w, h); r += 60) {
+        relationCtx.beginPath();
+        relationCtx.arc(cx, cy, r, 0, Math.PI * 2);
+        relationCtx.stroke();
+    }
+
+    // 繪製放射線
+    for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        relationCtx.beginPath();
+        relationCtx.moveTo(cx, cy);
+        relationCtx.lineTo(cx + Math.cos(angle) * Math.max(w, h), cy + Math.sin(angle) * Math.max(w, h));
+        relationCtx.stroke();
+    }
+
+    relationCtx.restore();
+}
+
+// 繪製關係連線（帶發光效果）
+function drawRelationLine(x1, y1, x2, y2, type) {
+    const color = CONFIG.colors.relationColors[type] || '#909090';
+
+    // 解析顏色以創建發光效果
+    relationCtx.save();
+
+    // 外發光
+    relationCtx.shadowColor = color;
+    relationCtx.shadowBlur = 8 + Math.sin(relationTime * 2) * 3;
+    relationCtx.strokeStyle = color;
+    relationCtx.lineWidth = 2;
+    relationCtx.globalAlpha = 0.6;
+    relationCtx.beginPath();
+    relationCtx.moveTo(x1, y1);
+    relationCtx.lineTo(x2, y2);
+    relationCtx.stroke();
+
+    // 核心線
+    relationCtx.shadowBlur = 0;
+    relationCtx.globalAlpha = 1;
+    relationCtx.lineWidth = 2;
+    relationCtx.beginPath();
+    relationCtx.moveTo(x1, y1);
+    relationCtx.lineTo(x2, y2);
+    relationCtx.stroke();
+
+    // 繪製流動的能量點
+    const pulsePos = (relationTime * 0.3) % 1;
+    const px = x1 + (x2 - x1) * pulsePos;
+    const py = y1 + (y2 - y1) * pulsePos;
+    relationCtx.beginPath();
+    relationCtx.arc(px, py, 3, 0, Math.PI * 2);
+    relationCtx.fillStyle = color;
+    relationCtx.fill();
+
+    relationCtx.restore();
+}
+
+// 繪製潛在連線（虛線）
+function drawPotentialLine(x1, y1, x2, y2) {
+    relationCtx.save();
+    relationCtx.strokeStyle = '#3a3d4a';
+    relationCtx.lineWidth = 1;
+    relationCtx.setLineDash([5, 10]);
+    relationCtx.globalAlpha = 0.3;
+    relationCtx.beginPath();
+    relationCtx.moveTo(x1, y1);
+    relationCtx.lineTo(x2, y2);
+    relationCtx.stroke();
+    relationCtx.restore();
+}
+
+// 繪製節點
+function drawNode(x, y, node, isPlayer, isSelected) {
+    const r = isPlayer ? 38 : 28;
+
+    relationCtx.save();
+
+    // 外圈發光（選中或玩家角色）
+    if (isSelected || isPlayer) {
+        const glowColor = isPlayer ? '#c9a227' : '#5a8fcc';
+        const pulseSize = 1 + Math.sin(relationTime * 3) * 0.1;
+        relationCtx.shadowColor = glowColor;
+        relationCtx.shadowBlur = 20 * pulseSize;
+        relationCtx.beginPath();
+        relationCtx.arc(x, y, r + 5, 0, Math.PI * 2);
+        relationCtx.strokeStyle = glowColor;
+        relationCtx.lineWidth = 2;
+        relationCtx.globalAlpha = 0.5 + Math.sin(relationTime * 3) * 0.2;
+        relationCtx.stroke();
+    }
+
+    relationCtx.shadowBlur = 0;
+    relationCtx.globalAlpha = 1;
+
+    // 節點背景漸層
+    const nodeGrad = relationCtx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+    if (isPlayer) {
+        nodeGrad.addColorStop(0, '#4a4535');
+        nodeGrad.addColorStop(1, '#2a2520');
+    } else {
+        nodeGrad.addColorStop(0, '#3a3d4a');
+        nodeGrad.addColorStop(1, '#22252f');
+    }
+
+    relationCtx.beginPath();
+    relationCtx.arc(x, y, r, 0, Math.PI * 2);
+    relationCtx.fillStyle = nodeGrad;
+    relationCtx.fill();
+
+    // 節點邊框
+    if (isPlayer) {
+        const borderGrad = relationCtx.createLinearGradient(x - r, y - r, x + r, y + r);
+        borderGrad.addColorStop(0, '#deb887');
+        borderGrad.addColorStop(0.5, '#c9a227');
+        borderGrad.addColorStop(1, '#a08020');
+        relationCtx.strokeStyle = borderGrad;
+        relationCtx.lineWidth = 3;
+    } else {
+        relationCtx.strokeStyle = isSelected ? '#c9a227' : '#5a5d6a';
+        relationCtx.lineWidth = 2;
+    }
+    relationCtx.stroke();
+
+    // 節點名稱
+    relationCtx.fillStyle = isPlayer ? '#deb887' : '#d8d8d0';
+    relationCtx.font = isPlayer ? '700 14px "Noto Serif TC"' : '400 13px "Noto Serif TC"';
+    relationCtx.textAlign = 'center';
+    relationCtx.textBaseline = 'middle';
+    relationCtx.fillText(node.name, x, y + r + 18);
+
+    // 玩家節點內部裝飾
+    if (isPlayer) {
+        relationCtx.fillStyle = '#c9a227';
+        relationCtx.font = '400 18px serif';
+        relationCtx.fillText('✧', x, y);
+    }
+
+    relationCtx.restore();
 }
 
 function showNPCDetail(node) {
     const panel = document.getElementById('npc-detail');
     if (!node) return panel.classList.remove('show');
-    let html = `<h3>${node.name}</h3><div class="desc">${node.desc||'無描述'}</div>`;
+
+    const isPlayer = node.id === 'player';
+    const relationLabels = {
+        love: '愛慕',
+        ally: '同盟',
+        neutral: '中立',
+        rival: '競爭',
+        enemy: '敵對'
+    };
+
+    // 取得此角色的所有關係
+    const nodeRelations = relationships.filter(r =>
+        r.revealed && (r.from === node.id || r.to === node.id)
+    ).map(r => {
+        const otherId = r.from === node.id ? r.to : r.from;
+        const other = otherId === 'player' ? playerCharacter : npcs.find(n => n.id === otherId);
+        return {
+            name: other?.name || '未知',
+            type: r.type,
+            label: relationLabels[r.type] || '未知'
+        };
+    });
+
+    let html = `
+        <h3>${node.name}</h3>
+        ${node.role ? `<div class="role">${node.role}</div>` : ''}
+        <div class="desc">${node.desc || '尚未深入了解此人...'}</div>
+    `;
+
+    if (nodeRelations.length > 0) {
+        html += `<div class="relations"><div style="color:#7a7d8a;font-size:13px;margin-bottom:10px;">已知關係</div>`;
+        nodeRelations.forEach(rel => {
+            html += `
+                <div class="relation-item">
+                    <span class="target">${rel.name}</span>
+                    <span class="status ${rel.type}">${rel.label}</span>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    } else if (!isPlayer) {
+        html += `<div style="color:#5a5d6a;font-size:13px;margin-top:15px;font-style:italic;">尚未發現與其他角色的關係...</div>`;
+    }
+
     panel.innerHTML = html;
     panel.classList.add('show');
 }
