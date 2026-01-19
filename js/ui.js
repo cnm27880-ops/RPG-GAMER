@@ -208,7 +208,20 @@ function toggleRelationModal(show) {
 function toggleLogModal(show) { document.getElementById('log-modal').classList.toggle('show', show); }
 function toggleSettingsModal(show) {
     document.getElementById('settings-modal').classList.toggle('show', show);
-    if (show) document.getElementById('api-key-input').value = apiKey;
+    if (show) {
+        // 載入 API Key
+        document.getElementById('api-key-input').value = apiKey;
+
+        // 載入 LLM 設定
+        if (typeof loadLLMSettings === 'function') {
+            loadLLMSettings();
+        }
+
+        // 更新 Provider 資訊
+        if (typeof updateProviderInfo === 'function') {
+            updateProviderInfo();
+        }
+    }
 }
 function toggleTimelineModal(show) {
     document.getElementById('timeline-modal').classList.toggle('show', show);

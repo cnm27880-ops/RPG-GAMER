@@ -75,16 +75,64 @@
     </div>
 
     <div id="settings-modal" class="modal-overlay">
-        <div class="modal-content" style="max-width:500px;">
+        <div class="modal-content" style="max-width:550px;">
             <span class="close-btn" onclick="toggleSettingsModal(false)">×</span>
             <div class="modal-title">引 擎 設 定</div>
+
+            <!-- API Key 設定 -->
             <div class="api-key-section">
-                <label>API Key (支援 Gemini / OpenAI 格式)</label>
-                <input type="password" id="api-key-input" placeholder="輸入 API Key (sk-... 或 AIza...)">
+                <label>API Key</label>
+                <input type="password" id="api-key-input" placeholder="輸入 API Key (支援多種格式)">
+                <div style="font-size:12px;color:#8f919c;margin-top:8px;">
+                    支援：Gemini (AIza...)、OpenAI (sk-...)、Claude (sk-ant-...)、Groq (gsk_...)、OpenRouter (sk-or-...)
+                </div>
             </div>
-            <div style="text-align:center;">
-                <button class="start-adventure-btn" style="padding:12px 40px;font-size:16px;" onclick="saveApiKey()">儲存</button>
+
+            <!-- Provider 選擇 -->
+            <div class="api-key-section" style="margin-top:15px;">
+                <label>AI 模型供應商</label>
+                <select id="provider-select" onchange="onProviderChange()" style="width:100%;padding:10px;background:#2a2d3a;border:1px solid #4a4d5e;color:#d8d8d0;border-radius:4px;">
+                    <option value="auto">自動偵測 (依 API Key 判斷)</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="groq">Groq</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="ollama">Ollama (本地模型)</option>
+                </select>
             </div>
+
+            <!-- 進階設定 (可摺疊) -->
+            <details style="margin-top:15px;">
+                <summary style="cursor:pointer;color:#deb887;font-size:14px;">進階設定</summary>
+                <div style="padding:15px 0;">
+                    <div class="api-key-section">
+                        <label>模型名稱 (選填)</label>
+                        <input type="text" id="model-input" placeholder="留空使用預設模型" style="width:100%;padding:10px;background:#2a2d3a;border:1px solid #4a4d5e;color:#d8d8d0;border-radius:4px;">
+                    </div>
+                    <div class="api-key-section" style="margin-top:10px;">
+                        <label>自訂 API 端點 (選填)</label>
+                        <input type="text" id="baseurl-input" placeholder="例如：https://api.example.com/v1" style="width:100%;padding:10px;background:#2a2d3a;border:1px solid #4a4d5e;color:#d8d8d0;border-radius:4px;">
+                    </div>
+                    <div style="margin-top:15px;">
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                            <input type="checkbox" id="streaming-toggle" style="width:18px;height:18px;">
+                            <span>啟用流式傳輸 (文字一邊生成一邊顯示)</span>
+                        </label>
+                    </div>
+                </div>
+            </details>
+
+            <!-- 當前 Provider 資訊 -->
+            <div id="provider-info" style="margin-top:15px;padding:10px;background:#1a1d24;border-radius:4px;font-size:12px;color:#8f919c;display:none;">
+                <span id="provider-info-text"></span>
+            </div>
+
+            <div style="text-align:center;margin-top:20px;">
+                <button class="start-adventure-btn" style="padding:12px 40px;font-size:16px;" onclick="saveApiKey()">儲存設定</button>
+            </div>
+
             <div style="text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid #3a3d4a;">
                 <button class="fate-action-btn" style="background:linear-gradient(135deg,#5a3030,#4a2020);" onclick="clearAutoSave();toggleSettingsModal(false);">
                     🗑️ 清除存檔
@@ -198,10 +246,36 @@
 
     <canvas id="gameCanvas"></canvas>
 
+    <!-- 核心配置 -->
     <script src="js/config.js"></script>
+
+    <!-- 通用 LLM 適配器（策略模式） -->
+    <script src="js/llm-providers.js"></script>
+
+    <!-- 提示詞管理系統 -->
+    <script src="js/prompts.js"></script>
+
+    <!-- 遊戲狀態管理 -->
+    <script src="js/game-state.js"></script>
+
+    <!-- API 服務（向後相容層） -->
     <script src="js/api.js"></script>
+
+    <!-- 遊戲系統 -->
     <script src="js/systems.js"></script>
+
+    <!-- UI 元件 -->
     <script src="js/ui.js"></script>
+
+    <!-- 主程式邏輯 -->
     <script src="js/main.js"></script>
+
+    <!-- 初始化 GameManager（延遲到所有模組載入後） -->
+    <script>
+        // 確保所有模組載入後初始化 GameManager
+        if (typeof initGameManager === 'function') {
+            initGameManager();
+        }
+    </script>
 </body>
 </html>
