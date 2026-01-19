@@ -284,12 +284,133 @@ function generateOptionsUI() {
 
 function saveApiKey() {
     const key = document.getElementById('api-key-input').value.trim();
-    if (!key) return showError("請輸入 Key");
+    if (!key && document.getElementById('provider-select').value !== 'ollama') {
+        return showError("請輸入 API Key");
+    }
+
+    // 儲存 API Key
     apiKey = key;
     localStorage.setItem('gemini_api_key', key);
+
+    // 取得進階設定
+    const provider = document.getElementById('provider-select').value;
+    const model = document.getElementById('model-input')?.value.trim() || '';
+    const baseUrl = document.getElementById('baseurl-input')?.value.trim() || '';
+    const streaming = document.getElementById('streaming-toggle')?.checked || false;
+
+    // 更新 CONFIG
+    CONFIG.llm.provider = provider;
+    CONFIG.llm.model = model;
+    CONFIG.llm.baseUrl = baseUrl;
+    CONFIG.llm.streaming = streaming;
+
+    // 儲存設定到 localStorage
+    localStorage.setItem('rpg_llm_settings', JSON.stringify({
+        provider, model, baseUrl, streaming
+    }));
+
+    // 如果 llmService 可用，重新初始化 Provider
+    if (typeof llmService !== 'undefined' && key) {
+        const config = { apiKey: key };
+        if (model) config.model = model;
+        if (baseUrl) config.baseUrl = baseUrl;
+
+        if (provider === 'auto') {
+            llmService.autoDetectProvider(key, config);
+        } else {
+            llmService.initProvider(provider, config);
+        }
+        llmService.setStreamingEnabled(streaming);
+
+        // 重置 aiService 的初始化狀態
+        if (typeof aiService !== 'undefined') {
+            aiService._initialized = false;
+        }
+
+        // 顯示 Provider 資訊
+        updateProviderInfo();
+    }
+
     toggleSettingsModal(false);
     if (currentState === STATE.INIT) startWorldGeneration();
 }
+
+// Provider 選擇變更時的處理
+function onProviderChange() {
+    const provider = document.getElementById('provider-select').value;
+    const modelInput = document.getElementById('model-input');
+    const baseUrlInput = document.getElementById('baseurl-input');
+
+    // 根據 Provider 預設值填入提示
+    if (provider !== 'auto' && CONFIG.llm.presets[provider]) {
+        const preset = CONFIG.llm.presets[provider];
+        modelInput.placeholder = `預設：${preset.defaultModel}`;
+        if (preset.baseUrl) {
+            baseUrlInput.placeholder = `預設：${preset.baseUrl}`;
+        } else {
+            baseUrlInput.placeholder = '使用官方端點';
+        }
+    } else {
+        modelInput.placeholder = '留空使用預設模型';
+        baseUrlInput.placeholder = '例如：https://api.example.com/v1';
+    }
+}
+
+// 更新 Provider 資訊顯示
+function updateProviderInfo() {
+    const infoDiv = document.getElementById('provider-info');
+    const infoText = document.getElementById('provider-info-text');
+
+    if (!infoDiv || !infoText) return;
+
+    let info = null;
+    if (typeof aiService !== 'undefined') {
+        info = aiService.getProviderInfo();
+    } else if (typeof llmService !== 'undefined' && llmService.currentProvider) {
+        info = llmService.getProviderInfo();
+    }
+
+    if (info) {
+        infoText.textContent = `目前使用：${info.name} / ${info.model}${info.supportsStreaming ? ' (支援流式傳輸)' : ''}`;
+        infoDiv.style.display = 'block';
+    } else {
+        infoDiv.style.display = 'none';
+    }
+}
+
+// 載入 LLM 設定
+function loadLLMSettings() {
+    try {
+        const settings = localStorage.getItem('rpg_llm_settings');
+        if (settings) {
+            const parsed = JSON.parse(settings);
+            CONFIG.llm.provider = parsed.provider || 'auto';
+            CONFIG.llm.model = parsed.model || '';
+            CONFIG.llm.baseUrl = parsed.baseUrl || '';
+            CONFIG.llm.streaming = parsed.streaming || false;
+
+            // 更新 UI
+            const providerSelect = document.getElementById('provider-select');
+            const modelInput = document.getElementById('model-input');
+            const baseUrlInput = document.getElementById('baseurl-input');
+            const streamingToggle = document.getElementById('streaming-toggle');
+
+            if (providerSelect) providerSelect.value = CONFIG.llm.provider;
+            if (modelInput) modelInput.value = CONFIG.llm.model;
+            if (baseUrlInput) baseUrlInput.value = CONFIG.llm.baseUrl;
+            if (streamingToggle) streamingToggle.checked = CONFIG.llm.streaming;
+
+            onProviderChange();
+        }
+    } catch (e) {
+        console.warn('載入 LLM 設定失敗:', e);
+    }
+}
+
+// 初始化時載入設定
+document.addEventListener('DOMContentLoaded', () => {
+    loadLLMSettings();
+});
 
 // 啟動遊戲
 init();

@@ -1,6 +1,7 @@
 // ============ API 服務與 AI 邏輯 ============
+// 此檔案現在作為向後相容層，內部使用新的 LLM Provider 系統
 
-// JSON 容錯解析函數
+// JSON 容錯解析函數（也被 llm-providers.js 使用）
 function tryParseJSON(text) {
     if (!text || typeof text !== 'string') return null;
     try { return JSON.parse(text); } catch (e) {}
@@ -23,13 +24,36 @@ function tryParseJSON(text) {
     return null;
 }
 
+/**
+ * GeminiService - 向後相容的 AI 服務類別
+ * 內部委託給新的 LLM Provider 系統
+ */
 class GeminiService {
     constructor() {
-        // 【已修正】這裡必須是純網址字串
-        this.baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/ https://generativelanguage.googleapis.com/v1beta/models/";
+        this.baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/";
+        this._useNewArchitecture = typeof llmService !== 'undefined';
+        this._initialized = false;
     }
 
-    // 核心呼叫函數：支援 Gemini 與 OpenAI 格式
+    /**
+     * 確保 Provider 已初始化
+     */
+    _ensureInitialized() {
+        if (this._initialized) return;
+
+        if (this._useNewArchitecture && apiKey) {
+            llmService.autoDetectProvider(apiKey);
+            llmService.setStreamingEnabled(
+                typeof gameManager !== 'undefined' && gameManager?.state?.settings?.streamingEnabled
+            );
+            this._initialized = true;
+        }
+    }
+
+    /**
+     * 核心呼叫函數：支援 Gemini、OpenAI、Claude 等格式
+     * 自動偵測 API Key 類型
+     */
     async call(prompt, systemInstruction, retryCount = 0) {
         const MAX_RETRIES = 2;
 
@@ -38,12 +62,35 @@ class GeminiService {
             return null;
         }
 
-        // 自動判斷：如果是 sk- 開頭，通常是 OpenAI 格式；否則是 Gemini
-        const isGemini = apiKey.startsWith('AIza') || !apiKey.startsWith('sk-'); 
-        
+        // 嘗試使用新架構
+        if (this._useNewArchitecture) {
+            this._ensureInitialized();
+            try {
+                const result = await llmService.generate(prompt, systemInstruction);
+                if (result) return result;
+            } catch (e) {
+                console.error('LLM Provider error:', e);
+                // 如果新架構失敗，回退到舊架構
+            }
+        }
+
+        // 舊架構回退邏輯
+        return await this._legacyCall(prompt, systemInstruction, retryCount);
+    }
+
+    /**
+     * 舊版 API 呼叫邏輯（回退用）
+     */
+    async _legacyCall(prompt, systemInstruction, retryCount = 0) {
+        const MAX_RETRIES = 2;
+
+        // 自動判斷 API 類型
+        const isGemini = apiKey.startsWith('AIza') ||
+                         (!apiKey.startsWith('sk-') && !apiKey.startsWith('gsk_'));
+
         try {
             let text;
-            
+
             if (isGemini) {
                 // --- Gemini API 邏輯 ---
                 const url = `${this.baseUrl}gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -62,19 +109,29 @@ class GeminiService {
                 text = data.candidates?.[0]?.content?.parts?.[0]?.text;
             } else {
                 // --- OpenAI 兼容格式 ---
-                // 【已修正】這裡必須是純網址字串
-                const url = "https://api.openai.com/v1/chat/completions https://api.openai.com/v1/chat/completions"; 
+                let baseUrl = "https://api.openai.com/v1/chat/completions";
+                let model = "gpt-4o";
+
+                // 自動偵測其他 Provider
+                if (apiKey.startsWith('gsk_')) {
+                    baseUrl = "https://api.groq.com/openai/v1/chat/completions";
+                    model = "llama-3.3-70b-versatile";
+                } else if (apiKey.startsWith('sk-or-')) {
+                    baseUrl = "https://openrouter.ai/api/v1/chat/completions";
+                    model = "anthropic/claude-3.5-sonnet";
+                }
+
                 const payload = {
-                    model: "gpt-4o", 
+                    model: model,
                     messages: [
                         { role: "system", content: systemInstruction },
                         { role: "user", content: prompt }
                     ],
                     response_format: { type: "json_object" }
                 };
-                const res = await fetch(url, {
+                const res = await fetch(baseUrl, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
@@ -97,8 +154,10 @@ class GeminiService {
             // 解析失敗，嘗試重試
             if (retryCount < MAX_RETRIES) {
                 console.warn(`JSON 解析失敗，正在重試... (${retryCount + 1}/${MAX_RETRIES})`);
-                if(typeof showFloatingText !== 'undefined') showFloatingText("格式異常，重試中...", canvasWidth/2, canvasHeight/2, '#c07070');
-                return await this.call(prompt, systemInstruction, retryCount + 1);
+                if(typeof showFloatingText !== 'undefined') {
+                    showFloatingText("格式異常，重試中...", canvasWidth/2, canvasHeight/2, '#c07070');
+                }
+                return await this._legacyCall(prompt, systemInstruction, retryCount + 1);
             }
             return null;
         } catch (e) {
@@ -108,7 +167,39 @@ class GeminiService {
         }
     }
 
+    /**
+     * 流式生成（新功能）
+     */
+    async callStream(prompt, systemInstruction, onChunk) {
+        if (!this._useNewArchitecture) {
+            // 不支援流式傳輸，回退到普通呼叫
+            const result = await this.call(prompt, systemInstruction);
+            if (result && onChunk) {
+                onChunk(JSON.stringify(result), true);
+            }
+            return result;
+        }
+
+        this._ensureInitialized();
+
+        try {
+            return await llmService.generate(prompt, systemInstruction, { onChunk });
+        } catch (e) {
+            console.error('Stream error:', e);
+            return await this.call(prompt, systemInstruction);
+        }
+    }
+
+    // ===== 遊戲專用 API 方法 =====
+
     async generateWorlds() {
+        // 優先使用 promptBuilder
+        if (typeof promptBuilder !== 'undefined') {
+            const { system, user } = promptBuilder.buildWorldGeneration();
+            return await this.call(user, system);
+        }
+
+        // 回退到內建 prompt
         const sys = `你是資深奇幻世界架構師。生成3個獨特的TRPG世界。
 每個世界需要：
 - 獨特的世界觀主題（如賽博龐克、克蘇魯、仙俠、蒸汽龐克、末日廢土等）
@@ -133,9 +224,16 @@ class GeminiService {
     }
 
     async generateOpeningScene(world) {
+        // 優先使用 promptBuilder
+        if (typeof promptBuilder !== 'undefined') {
+            const { system, user } = promptBuilder.buildOpeningScene(world, playerCharacter);
+            return await this.call(user, system);
+        }
+
+        // 回退到內建 prompt
         const charInfo = typeof getCharacterPromptString === 'function' ? getCharacterPromptString() : "主角：無名旅人";
         const traitMods = typeof getTraitOptionModifiers === 'function' ? getTraitOptionModifiers() : {risk:1, focus:1, normal:1};
-        const traitHint = playerCharacter.traits.length > 0 ?
+        const traitHint = playerCharacter?.traits?.length > 0 ?
             `根據角色性格，選項比例建議：risk權重${traitMods.risk.toFixed(1)}、focus權重${traitMods.focus.toFixed(1)}、normal權重${traitMods.normal.toFixed(1)}` : '';
 
         const sys = `你是TRPG遊戲主持人。世界：${world.name} - ${world.desc}
@@ -149,6 +247,7 @@ ${charInfo}
 3. 給予3個行動選項。
 
 【重要】：請拒絕流水帳，開場即衝突。讓玩家立刻面臨一個選擇或謎團。
+${traitHint}
 
 回傳 JSON：
 {
@@ -172,15 +271,25 @@ ${charInfo}
     "targetId": "player",
     "type": "neutral",
     "reason": "關係原因"
-  }]
+  }],
+  "environment_atmosphere": "環境氣氛(如：緊張、神秘)"
 }`;
         return await this.call("生成開場場景", sys);
     }
 
     async generateNextScene(world, context, action, factions, npcs, calendar) {
+        // 優先使用 promptBuilder
+        if (typeof promptBuilder !== 'undefined') {
+            const { system, user } = promptBuilder.buildNextScene(
+                world, context, action, factions, npcs, calendar, playerCharacter
+            );
+            return await this.call(user, system);
+        }
+
+        // 回退到內建 prompt
         const npcList = npcs.map(n => {
-            const statusName = (typeof NPC_STATUS_INFO !== 'undefined' && NPC_STATUS_INFO[n.status]) 
-                ? NPC_STATUS_INFO[n.status].name 
+            const statusName = (typeof NPC_STATUS_INFO !== 'undefined' && NPC_STATUS_INFO[n.status])
+                ? NPC_STATUS_INFO[n.status].name
                 : '未知';
             return `${n.name}(${n.role},狀態:${statusName})`;
         }).join('、');
@@ -189,7 +298,7 @@ ${charInfo}
 
         const charInfo = typeof getCharacterPromptString === 'function' ? getCharacterPromptString() : "";
         const traitMods = typeof getTraitOptionModifiers === 'function' ? getTraitOptionModifiers() : {risk:1, focus:1, normal:1};
-        const traitHint = playerCharacter.traits.length > 0 ?
+        const traitHint = playerCharacter?.traits?.length > 0 ?
             `根據角色性格，選項比例建議：risk權重${traitMods.risk.toFixed(1)}、focus權重${traitMods.focus.toFixed(1)}、normal權重${traitMods.normal.toFixed(1)}` : '';
 
         const sys = `你是TRPG遊戲主持人。
@@ -225,7 +334,8 @@ ${traitHint}
   "fateEvent": null 或 { "name": "事件名", "points": 3, "desc": "事件描述" },
   "newRelations": [],
   "revealedRelations": [],
-  "npcStatusChanges": [{ "id": "npc_xxx", "newStatus": "injured/missing/dead/etc", "reason": "變更原因" }]
+  "npcStatusChanges": [{ "id": "npc_xxx", "newStatus": "injured/missing/dead/etc", "reason": "變更原因" }],
+  "environment_atmosphere": "環境氣氛"
 }`;
         const prompt = `前情：${context}\n\n玩家行動：${action}`;
         return await this.call(prompt, sys);
@@ -251,25 +361,37 @@ ${diceContext}
 規則與核心指令同上（拒絕流水帳、衝突導向）。
 
 回傳 JSON (格式同上)`;
-        
+
         const prompt = `前情：${context}\n\n玩家行動：${action}`;
         return await this.call(prompt, sys);
     }
 
     async summarizeHistory(world, log) {
+        // 優先使用 promptBuilder
+        if (typeof promptBuilder !== 'undefined') {
+            const { system, user } = promptBuilder.buildSummarizeHistory(world.name, log);
+            return await this.call(user, system);
+        }
+
         const sys = `你是冒險者的隨身筆記助手。請分析冒險紀錄，列出：
 1. 【當前目標】：主角現在最該做什麼？
 2. 【重要線索】：最近獲得了什麼關鍵情報？
 3. 【待解謎團】：還有什麼未解之謎？
 
 請用條列式 Markdown 格式，簡潔明瞭，不要寫成故事或詩歌。`;
-        
+
         const logText = log.slice(-25).map(h => `[${h.role}]: ${h.text}`).join("\n");
         return await this.call(`世界：${world.name}\n紀錄:\n${logText}`, sys);
     }
 
     async compressHistoryLog(log) {
-        const sys = `你是故事記錄員。請將以下事件記錄濃縮為 100-150 字的摘要，保留關鍵人物、重大事件、重要選擇。只回傳摘要文字，不需要 JSON 格式。
+        // 優先使用 promptBuilder
+        if (typeof promptBuilder !== 'undefined') {
+            const { system, user } = promptBuilder.buildCompressHistory(log);
+            return await this.call(user, system);
+        }
+
+        const sys = `你是故事記錄員。請將以下事件記錄濃縮為 100-150 字的摘要，保留關鍵人物、重大事件、重要選擇。
 
 回傳 JSON：
 {
@@ -278,6 +400,26 @@ ${diceContext}
         const logText = log.map(h => `[${h.role}]: ${h.text}`).join("\n");
         return await this.call(`事件記錄:\n${logText}`, sys);
     }
+
+    /**
+     * 取得當前使用的 Provider 資訊
+     */
+    getProviderInfo() {
+        if (this._useNewArchitecture && llmService.currentProvider) {
+            return llmService.getProviderInfo();
+        }
+
+        // 回退到基本資訊
+        const isGemini = !apiKey || apiKey.startsWith('AIza') ||
+                         (!apiKey.startsWith('sk-') && !apiKey.startsWith('gsk_'));
+
+        return {
+            name: isGemini ? 'Google Gemini' : 'OpenAI Compatible',
+            model: isGemini ? 'gemini-2.0-flash' : 'gpt-4o',
+            supportsStreaming: this._useNewArchitecture
+        };
+    }
 }
 
+// 建立全域 AI 服務實例
 const aiService = new GeminiService();
