@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gemini RPG Engine V8 - 命運織網</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;400;700;900&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0d0f14;
+            font-family: 'Noto Serif TC', serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #gameCanvas {
+            display: block;
+            touch-action: none;
+        }
+
+        /* 字體預載 */
+        .font-preload {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        /* 工具列 */
+        .toolbar {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        @media (min-width: 600px) {
+            .toolbar { top: 20px; right: 20px; gap: 12px; }
+        }
+
+        .tool-btn {
+            background: rgba(20, 22, 30, 0.9);
+            border: 1px solid #3a3d4a;
+            color: #7a7d8a;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            position: relative;
+        }
+
+        .tool-btn:hover, .tool-btn:active {
+            border-color: #c9a227;
+            color: #c9a227;
+            box-shadow: 0 0 15px rgba(201, 162, 39, 0.2);
+        }
+
+        .tool-btn.active {
+            color: #c9a227;
+            border-color: #c9a227;
+            background: rgba(201, 162, 39, 0.1);
+        }
+
+        /* 徽章 */
+        .tool-btn .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: linear-gradient(135deg, #c9a227, #a8860f);
+            color: #0d0f14;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        /* 日曆顯示 */
+        .calendar-display {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(20, 22, 30, 0.9);
+            border: 1px solid #3a3d4a;
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #b0a080;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .calendar-display .date {
+            font-weight: 700;
+            font-size: 16px;
+            color: #d4c4a0;
+        }
+
+        .calendar-display .time {
+            font-size: 12px;
+            color: #7a7d8a;
+            margin-top: 2px;
+        }
+
+        /* 命運點顯示 */
+        .fate-points {
+            position: absolute;
+            top: 60px;
+            left: 12px;
+            background: linear-gradient(135deg, rgba(30, 25, 40, 0.95), rgba(20, 18, 30, 0.95));
+            border: 1px solid #5a4a7a;
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: #a090c0;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fate-points .icon {
+            font-size: 18px;
+        }
+
+        .fate-points .value {
+            font-weight: 900;
+            font-size: 18px;
+            color: #c0a0e0;
+        }
+
+        /* 模態視窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, #1a1c24 0%, #14161c 100%);
+            border: 1px solid #3a3d4a;
+            width: 95%;
+            max-width: 900px;
+            max-height: 90vh;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            overflow-y: auto;
+            position: relative;
+            transform: translateY(20px) scale(0.98);
+            transition: transform 0.3s ease;
+        }
+
+        @media (min-width: 600px) {
+            .modal-content { padding: 30px; }
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-title {
+            font-weight: 900;
+            font-size: 24px;
+            color: #c9a227;
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a2d3a;
+            letter-spacing: 3px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 18px;
+            color: #6a6d7a;
+            cursor: pointer;
+            font-size: 28px;
+            font-weight: 200;
+            line-height: 1;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+        .close-btn:hover { color: #fff; }
+
+        /* 關係網畫布 */
+        #relationCanvas {
+            width: 100%;
+            height: 400px;
+            background: radial-gradient(ellipse at center, #1a1c24 0%, #0d0f14 100%);
+            border-radius: 8px;
+            border: 1px solid #2a2d3a;
+        }
+
+        @media (min-width: 600px) {
+            #relationCanvas { height: 500px; }
+        }
+
+        /* NPC 詳情面板 */
+        .npc-detail-panel {
+            background: rgba(25, 27, 35, 0.95);
+            border: 1px solid #3a3d4a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .npc-detail-panel.show { display: block; }
+
+        .npc-detail-panel h3 {
+            color: #d4c4a0;
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+
+        .npc-detail-panel .role {
+            color: #7a7d8a;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .npc-detail-panel .desc {
+            color: #a0a5b0;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .npc-detail-panel .relations {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #2a2d3a;
+        }
+
+        .npc-detail-panel .relation-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .relation-item .target { color: #b0a080; }
+        .relation-item .status { font-size: 13px; padding: 3px 10px; border-radius: 12px; }
+        .relation-item .status.love { background: rgba(200, 100, 120, 0.3); color: #e0a0b0; }
+        .relation-item .status.ally { background: rgba(100, 180, 120, 0.3); color: #a0d0b0; }
+        .relation-item .status.neutral { background: rgba(150, 150, 150, 0.3); color: #b0b0b0; }
+        .relation-item .status.rival { background: rgba(200, 150, 80, 0.3); color: #d0c090; }
+        .relation-item .status.enemy { background: rgba(180, 80, 80, 0.3); color: #d0a0a0; }
+
+        /* 命運干涉按鈕 */
+        .fate-action-btn {
+            background: linear-gradient(135deg, #3a2a5a, #2a1a4a);
+            border: 1px solid #5a4a7a;
+            color: #c0a0e0;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .fate-action-btn:hover {
+            background: linear-gradient(135deg, #4a3a6a, #3a2a5a);
+            box-shadow: 0 0 20px rgba(160, 120, 200, 0.3);
+        }
+
+        .fate-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .fate-action-btn .cost {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* 世界觀展示 */
+        .world-intro {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .world-intro h2 {
+            font-size: 32px;
+            font-weight: 900;
+            color: #c9a227;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+        }
+
+        .world-intro .desc {
+            font-size: 18px;
+            color: #a0a5b0;
+            line-height: 2;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .world-intro .factions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .faction-card {
+            background: rgba(30, 32, 40, 0.9);
+            border: 1px solid #3a3d4a;
+            border-radius: 8px;
+            padding: 20px;
+            width: 250px;
+            text-align: left;
+        }
+
+        .faction-card h4 {
+            color: #d4c4a0;
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+
+        .faction-card p {
+            color: #8a8d9a;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .start-adventure-btn {
+            background: linear-gradient(135deg, #c9a227, #a8860f);
+            border: none;
+            color: #0d0f14;
+            padding: 15px 50px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: all 0.3s;
+            letter-spacing: 2px;
+        }
+
+        .start-adventure-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(201, 162, 39, 0.4);
+        }
+
+        /* API Key 設定 */
+        .api-key-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(201, 162, 39, 0.05);
+            border: 1px solid #3a3d4a;
+            border-radius: 8px;
+        }
+
+        .api-key-section label {
+            display: block;
+            font-size: 14px;
+            color: #7a7d8a;
+            margin-bottom: 8px;
+        }
+
+        .api-key-section input {
+            width: 100%;
+            padding: 12px;
+            background: #0d0f14;
+            border: 1px solid #3a3d4a;
+            border-radius: 6px;
+            color: #d0d0d0;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .api-key-section input:focus { border-color: #c9a227; }
+
+        /* 錯誤提示 */
+        .error-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(180, 60, 60, 0.95);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 200;
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .error-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 捲軸樣式 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0d0f14; }
+        ::-webkit-scrollbar-thumb { background: #3a3d4a; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="font-preload" aria-hidden="true">
+        <span style="font-weight:200">載</span>
+        <span style="font-weight:400">載</span>
+        <span style="font-weight:700">載</span>
+        <span style="font-weight:900">載</span>
+    </div>
+
+    <!-- 日曆 -->
+    <div id="calendar-display" class="calendar-display" style="display:none;">
+        <div class="date" id="calendar-date">第一年 春月 初一</div>
+        <div class="time" id="calendar-time">清晨</div>
+    </div>
+
+    <!-- 命運點 -->
+    <div id="fate-display" class="fate-points" style="display:none;">
+        <span class="icon">✧</span>
+        <span class="value" id="fate-value">0</span>
+    </div>
+
+    <!-- 工具列 -->
+    <div class="toolbar">
+        <button id="btn-relation" class="tool-btn" title="人物關係網">
+            🕸️
+            <span class="badge" id="npc-count" style="display:none;">0</span>
+        </button>
+        <button id="btn-sound" class="tool-btn" title="語音旁白">🔇</button>
+        <button id="btn-log" class="tool-btn" title="冒險編年史">📜</button>
+        <button id="btn-settings" class="tool-btn" title="設定">⚙️</button>
+    </div>
+
+    <!-- 錯誤提示 -->
+    <div id="error-toast" class="error-toast" role="alert"></div>
+
+    <!-- 關係網視窗 -->
+    <div id="relation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="toggleRelationModal(false)">×</span>
+            <div class="modal-title">命 運 織 網</div>
+            <canvas id="relationCanvas"></canvas>
+            <div id="npc-detail" class="npc-detail-panel"></div>
+        </div>
+    </div>
+
+    <!-- 編年史視窗 -->
+    <div id="log-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="toggleLogModal(false)">×</span>
+            <div class="modal-title">冒 險 編 年 史</div>
+            <div id="log-body" style="color:#a0a5b0;line-height:2;white-space:pre-wrap;"></div>
+        </div>
+    </div>
+
+    <!-- 設定視窗 -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="close-btn" onclick="toggleSettingsModal(false)">×</span>
+            <div class="modal-title">引 擎 設 定</div>
+            <div class="api-key-section">
+                <label>Gemini API Key</label>
+                <input type="password" id="api-key-input" placeholder="輸入你的 API Key...">
+            </div>
+            <div style="text-align:center;">
+                <button class="start-adventure-btn" style="padding:12px 40px;font-size:16px;" onclick="saveApiKey()">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 世界觀展示視窗 -->
+    <div id="world-intro-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:800px;">
+            <div id="world-intro-content" class="world-intro"></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        /**
+         * Gemini RPG Engine V8 - 命運織網
+         * 特色功能：
+         * 1. 人物關係網 (可視化 NPC 關係)
+         * 2. 命運點系統 (干涉 NPC 關係)
+         * 3. 日曆系統 (時間流逝)
+         * 4. 世界觀展示
+         */
+
+        // ============ 全域設定 ============
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let apiKey = localStorage.getItem('gemini_api_key') || "";
+
+        const CONFIG = {
+            colors: {
+                bg: '#0d0f14',
+                textPrimary: '#d0d0c8',
+                textDim: '#7a7d8a',
+                textGold: '#c9a227',
+                panelBg: 'rgba(20, 22, 30, 0.95)',
+                panelBorder: '#3a3d4a',
+                factions: ['#c76b6b', '#7eb58c', '#6b9bc7'],
+                relationColors: {
+                    love: '#e08090',
+                    ally: '#80c090',
+                    neutral: '#909090',
+                    rival: '#c0a060',
+                    enemy: '#c07070'
+                }
+            },
+            getFonts: (mobile) => {
+                const s = mobile ? 0.85 : 1;
+                return {
+                    display: `900 ${Math.round(36*s)}px "Noto Serif TC"`,
+                    displayLarge: `900 ${Math.round(44*s)}px "Noto Serif TC"`,
+                    body: `400 ${Math.round(19*s)}px "Noto Serif TC"`,
+                    ui: `700 ${Math.round(14*s)}px "Noto Serif TC"`,
+                    small: `400 ${Math.round(13*s)}px "Noto Serif TC"`
+                };
+            }
+        };
+
+        // ============ 遊戲狀態 ============
+        const STATE = { INIT: 0, LOADING: 1, WORLD_SELECT: 2, WORLD_INTRO: 3, TYPING: 4, CHOICE: 5 };
+        let currentState = STATE.INIT;
+        let canvasWidth = 0, canvasHeight = 0, isMobile = false, fonts = {};
+        let mouseX = 0, mouseY = 0;
+
+        // 遊戲數據
+        let currentWorld = null;
+        let factionData = [];
+        let storyContext = "";
+        let historyLog = [];
+        let currentOptions = [];
+        let loadingText = "";
+        let generatedWorlds = [];
+
+        // 音訊
+        let isSoundOn = false, currentAudio = null;
+
+        // ============ 新系統：日曆 ============
+        const CALENDAR = {
+            year: 1,
+            season: 0, // 0春 1夏 2秋 3冬
+            day: 1,
+            timeOfDay: 0, // 0清晨 1上午 2午後 3黃昏 4夜晚 5深夜
+            seasonNames: ['春月', '夏月', '秋月', '冬月'],
+            dayNames: ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+                       '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+                       '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'],
+            timeNames: ['清晨', '上午', '午後', '黃昏', '夜晚', '深夜'],
+
+            advance(units = 1) {
+                for (let i = 0; i < units; i++) {
+                    this.timeOfDay++;
+                    if (this.timeOfDay >= 6) {
+                        this.timeOfDay = 0;
+                        this.day++;
+                        if (this.day > 30) {
+                            this.day = 1;
+                            this.season++;
+                            if (this.season >= 4) {
+                                this.season = 0;
+                                this.year++;
+                            }
+                        }
+                    }
+                }
+                this.updateDisplay();
+            },
+
+            getString() {
+                return `第${this.year}年 ${this.seasonNames[this.season]} ${this.dayNames[this.day-1]}`;
+            },
+
+            getTimeString() {
+                return this.timeNames[this.timeOfDay];
+            },
+
+            updateDisplay() {
+                document.getElementById('calendar-date').textContent = this.getString();
+                document.getElementById('calendar-time').textContent = this.getTimeString();
+            },
+
+            reset() {
+                this.year = 1;
+                this.season = 0;
+                this.day = 1;
+                this.timeOfDay = 0;
+            }
+        };
+
+        // ============ 新系統：命運點 ============
+        let fatePoints = 0;
+
+        function addFatePoints(amount) {
+            fatePoints += amount;
+            document.getElementById('fate-value').textContent = fatePoints;
+            // 顯示獲得動畫效果
+            if (amount > 0) {
+                showFloatingText(`+${amount} 命運點`, canvasWidth/2, canvasHeight/2, '#c0a0e0');
+            }
+        }
+
+        function spendFatePoints(amount) {
+            if (fatePoints >= amount) {
+                fatePoints -= amount;
+                document.getElementById('fate-value').textContent = fatePoints;
+                return true;
+            }
+            return false;
+        }
+
+        // ============ 新系統：NPC 與關係網 ============
+        let playerCharacter = {
+            id: 'player',
+            name: '旅人',
+            role: '命運的見證者',
+            desc: '你，一個踏入這個世界的旅人。',
+            faction: -1,
+            x: 0, y: 0, // 關係網中的位置
+            known: true
+        };
+
+        let npcs = []; // NPC 列表
+        let relationships = []; // 關係列表 { from, to, type, strength, revealed }
+
+        const RELATION_TYPES = {
+            love: { name: '愛慕', color: '#e08090', cost: 8 },
+            ally: { name: '盟友', color: '#80c090', cost: 5 },
+            neutral: { name: '中立', color: '#909090', cost: 3 },
+            rival: { name: '競爭', color: '#c0a060', cost: 5 },
+            enemy: { name: '敵對', color: '#c07070', cost: 8 }
+        };
+
+        function addNPC(npc) {
+            if (!npcs.find(n => n.id === npc.id)) {
+                npc.known = true;
+                npc.x = Math.random() * 300 - 150;
+                npc.y = Math.random() * 300 - 150;
+                npcs.push(npc);
+                updateNPCBadge();
+                showFloatingText(`遇見了 ${npc.name}`, canvasWidth/2, 100, '#d4c4a0');
+            }
+        }
+
+        function addRelationship(fromId, toId, type, revealed = false) {
+            const existing = relationships.find(r => 
+                (r.from === fromId && r.to === toId) || (r.from === toId && r.to === fromId)
+            );
+            if (!existing) {
+                relationships.push({ from: fromId, to: toId, type, revealed });
+            }
+        }
+
+        function revealRelationship(fromId, toId) {
+            const rel = relationships.find(r => 
+                (r.from === fromId && r.to === toId) || (r.from === toId && r.to === fromId)
+            );
+            if (rel && !rel.revealed) {
+                rel.revealed = true;
+                return true;
+            }
+            return false;
+        }
+
+        function modifyRelationship(fromId, toId, newType) {
+            const rel = relationships.find(r => 
+                (r.from === fromId && r.to === toId) || (r.from === toId && r.to === fromId)
+            );
+            if (rel) {
+                rel.type = newType;
+                return true;
+            }
+            return false;
+        }
+
+        function updateNPCBadge() {
+            const badge = document.getElementById('npc-count');
+            if (npcs.length > 0) {
+                badge.textContent = npcs.length;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // ============ 關係網視覺化 ============
+        let relationCanvas, relationCtx;
+        let selectedNPC = null;
+        let relationDragging = null;
+        let relationOffset = { x: 0, y: 0 };
+
+        function initRelationCanvas() {
+            relationCanvas = document.getElementById('relationCanvas');
+            relationCtx = relationCanvas.getContext('2d');
+            
+            const rect = relationCanvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            relationCanvas.width = rect.width * dpr;
+            relationCanvas.height = rect.height * dpr;
+            relationCtx.scale(dpr, dpr);
+
+            // 事件
+            relationCanvas.addEventListener('mousedown', onRelationMouseDown);
+            relationCanvas.addEventListener('mousemove', onRelationMouseMove);
+            relationCanvas.addEventListener('mouseup', onRelationMouseUp);
+            relationCanvas.addEventListener('touchstart', onRelationTouchStart, { passive: false });
+            relationCanvas.addEventListener('touchmove', onRelationTouchMove, { passive: false });
+            relationCanvas.addEventListener('touchend', onRelationTouchEnd, { passive: false });
+        }
+
+        function getRelationCanvasCoords(e) {
+            const rect = relationCanvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+            const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+            return { x, y };
+        }
+
+        function findNodeAt(x, y) {
+            const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
+            const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
+
+            // 檢查玩家
+            const px = centerX + playerCharacter.x;
+            const py = centerY + playerCharacter.y;
+            if (Math.hypot(x - px, y - py) < 35) return playerCharacter;
+
+            // 檢查 NPC
+            for (const npc of npcs) {
+                const nx = centerX + npc.x;
+                const ny = centerY + npc.y;
+                if (Math.hypot(x - nx, y - ny) < 30) return npc;
+            }
+            return null;
+        }
+
+        function onRelationMouseDown(e) {
+            const { x, y } = getRelationCanvasCoords(e);
+            const node = findNodeAt(x, y);
+            if (node) {
+                relationDragging = node;
+                const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
+                const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
+                relationOffset.x = x - (centerX + node.x);
+                relationOffset.y = y - (centerY + node.y);
+            }
+        }
+
+        function onRelationMouseMove(e) {
+            const { x, y } = getRelationCanvasCoords(e);
+            if (relationDragging) {
+                const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
+                const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
+                relationDragging.x = x - centerX - relationOffset.x;
+                relationDragging.y = y - centerY - relationOffset.y;
+                drawRelationNetwork();
+            }
+        }
+
+        function onRelationMouseUp(e) {
+            if (relationDragging) {
+                const { x, y } = getRelationCanvasCoords(e);
+                const node = findNodeAt(x, y);
+                if (node && node === relationDragging) {
+                    selectNPC(node);
+                }
+                relationDragging = null;
+            }
+        }
+
+        function onRelationTouchStart(e) {
+            e.preventDefault();
+            onRelationMouseDown(e);
+        }
+
+        function onRelationTouchMove(e) {
+            e.preventDefault();
+            onRelationMouseMove(e);
+        }
+
+        function onRelationTouchEnd(e) {
+            e.preventDefault();
+            onRelationMouseUp(e);
+        }
+
+        function selectNPC(node) {
+            selectedNPC = node;
+            showNPCDetail(node);
+        }
+
+        function showNPCDetail(node) {
+            const panel = document.getElementById('npc-detail');
+            if (!node) {
+                panel.classList.remove('show');
+                return;
+            }
+
+            const isPlayer = node.id === 'player';
+            let html = `
+                <h3>${node.name}</h3>
+                <div class="role">${node.role}</div>
+                <div class="desc">${node.desc}</div>
+            `;
+
+            // 顯示關係
+            const nodeRelations = relationships.filter(r => 
+                (r.from === node.id || r.to === node.id) && r.revealed
+            );
+
+            if (nodeRelations.length > 0) {
+                html += `<div class="relations"><strong style="color:#7a7d8a;">已知關係：</strong>`;
+                for (const rel of nodeRelations) {
+                    const otherId = rel.from === node.id ? rel.to : rel.from;
+                    const other = otherId === 'player' ? playerCharacter : npcs.find(n => n.id === otherId);
+                    if (other) {
+                        const typeInfo = RELATION_TYPES[rel.type];
+                        html += `
+                            <div class="relation-item">
+                                <span class="target">${other.name}</span>
+                                <span class="status ${rel.type}">${typeInfo.name}</span>
+                            </div>
+                        `;
+                    }
+                }
+                html += `</div>`;
+            }
+
+            // 命運干涉按鈕（非玩家）
+            if (!isPlayer) {
+                const unrevealedRels = relationships.filter(r => 
+                    (r.from === node.id || r.to === node.id) && !r.revealed
+                );
+
+                if (unrevealedRels.length > 0) {
+                    html += `
+                        <button class="fate-action-btn" onclick="revealRandomRelation('${node.id}')" ${fatePoints < 3 ? 'disabled' : ''}>
+                            ✧ 窺視命運之線 <span class="cost">(消耗 3 命運點)</span>
+                        </button>
+                    `;
+                }
+
+                // 修改關係的選項
+                const revealedRels = relationships.filter(r => 
+                    (r.from === node.id || r.to === node.id) && r.revealed
+                );
+
+                if (revealedRels.length > 0) {
+                    html += `<div style="margin-top:15px;">`;
+                    for (const rel of revealedRels) {
+                        const otherId = rel.from === node.id ? rel.to : rel.from;
+                        const other = otherId === 'player' ? playerCharacter : npcs.find(n => n.id === otherId);
+                        if (other && otherId !== 'player') {
+                            html += `
+                                <button class="fate-action-btn" onclick="openModifyRelation('${node.id}', '${otherId}')" ${fatePoints < 5 ? 'disabled' : ''}>
+                                    ✧ 干涉與${other.name}的羈絆 <span class="cost">(消耗 5+ 命運點)</span>
+                                </button>
+                            `;
+                        }
+                    }
+                    html += `</div>`;
+                }
+            }
+
+            panel.innerHTML = html;
+            panel.classList.add('show');
+        }
+
+        function revealRandomRelation(nodeId) {
+            if (!spendFatePoints(3)) {
+                showError("命運點不足");
+                return;
+            }
+
+            const unrevealedRels = relationships.filter(r => 
+                (r.from === nodeId || r.to === nodeId) && !r.revealed
+            );
+
+            if (unrevealedRels.length > 0) {
+                const rel = unrevealedRels[Math.floor(Math.random() * unrevealedRels.length)];
+                rel.revealed = true;
+                drawRelationNetwork();
+                showNPCDetail(selectedNPC);
+                showFloatingText("命運之線顯現...", canvasWidth/2, canvasHeight/2, '#c0a0e0');
+            }
+        }
+
+        function openModifyRelation(fromId, toId) {
+            const fromNPC = npcs.find(n => n.id === fromId);
+            const toNPC = npcs.find(n => n.id === toId);
+            if (!fromNPC || !toNPC) return;
+
+            const rel = relationships.find(r => 
+                (r.from === fromId && r.to === toId) || (r.from === toId && r.to === fromId)
+            );
+            if (!rel) return;
+
+            let options = '';
+            for (const [type, info] of Object.entries(RELATION_TYPES)) {
+                if (type !== rel.type) {
+                    options += `<button class="fate-action-btn" style="margin:5px;" onclick="executeModifyRelation('${fromId}', '${toId}', '${type}', ${info.cost})" ${fatePoints < info.cost ? 'disabled' : ''}>
+                        ${info.name} <span class="cost">(${info.cost}點)</span>
+                    </button>`;
+                }
+            }
+
+            const panel = document.getElementById('npc-detail');
+            panel.innerHTML = `
+                <h3>干涉命運</h3>
+                <div class="role">改變 ${fromNPC.name} 與 ${toNPC.name} 之間的關係</div>
+                <div style="margin-top:20px;">
+                    <div style="color:#7a7d8a;margin-bottom:10px;">目前關係：${RELATION_TYPES[rel.type].name}</div>
+                    <div>將其轉變為：</div>
+                    ${options}
+                </div>
+                <button class="fate-action-btn" style="margin-top:20px;background:#2a2a3a;" onclick="showNPCDetail(selectedNPC)">取消</button>
+            `;
+        }
+
+        function executeModifyRelation(fromId, toId, newType, cost) {
+            if (!spendFatePoints(cost)) {
+                showError("命運點不足");
+                return;
+            }
+
+            modifyRelationship(fromId, toId, newType);
+            drawRelationNetwork();
+            showNPCDetail(selectedNPC);
+            showFloatingText("命運已被改寫...", canvasWidth/2, canvasHeight/2, '#c0a0e0');
+
+            // 加入歷史記錄
+            const fromNPC = npcs.find(n => n.id === fromId);
+            const toNPC = npcs.find(n => n.id === toId);
+            if (fromNPC && toNPC) {
+                historyLog.push({
+                    role: 'Fate',
+                    text: `命運被干涉：${fromNPC.name}與${toNPC.name}的關係轉變為「${RELATION_TYPES[newType].name}」`
+                });
+            }
+        }
+
+        function drawRelationNetwork() {
+            if (!relationCtx) return;
+
+            const w = relationCanvas.width / (window.devicePixelRatio || 1);
+            const h = relationCanvas.height / (window.devicePixelRatio || 1);
+            const centerX = w / 2;
+            const centerY = h / 2;
+
+            // 清除
+            relationCtx.fillStyle = '#0d0f14';
+            relationCtx.fillRect(0, 0, w, h);
+
+            // 背景網格
+            relationCtx.strokeStyle = 'rgba(60, 65, 80, 0.15)';
+            relationCtx.lineWidth = 1;
+            for (let x = 0; x < w; x += 40) {
+                relationCtx.beginPath();
+                relationCtx.moveTo(x, 0);
+                relationCtx.lineTo(x, h);
+                relationCtx.stroke();
+            }
+            for (let y = 0; y < h; y += 40) {
+                relationCtx.beginPath();
+                relationCtx.moveTo(0, y);
+                relationCtx.lineTo(w, y);
+                relationCtx.stroke();
+            }
+
+            // 繪製關係線
+            for (const rel of relationships) {
+                if (!rel.revealed) continue;
+
+                const fromNode = rel.from === 'player' ? playerCharacter : npcs.find(n => n.id === rel.from);
+                const toNode = rel.to === 'player' ? playerCharacter : npcs.find(n => n.id === rel.to);
+
+                if (fromNode && toNode) {
+                    const fx = centerX + fromNode.x;
+                    const fy = centerY + fromNode.y;
+                    const tx = centerX + toNode.x;
+                    const ty = centerY + toNode.y;
+
+                    const typeInfo = RELATION_TYPES[rel.type];
+                    relationCtx.strokeStyle = typeInfo.color;
+                    relationCtx.lineWidth = 2;
+                    relationCtx.setLineDash(rel.type === 'enemy' ? [5, 5] : []);
+
+                    relationCtx.beginPath();
+                    relationCtx.moveTo(fx, fy);
+                    relationCtx.lineTo(tx, ty);
+                    relationCtx.stroke();
+
+                    // 關係標籤
+                    const mx = (fx + tx) / 2;
+                    const my = (fy + ty) / 2;
+                    relationCtx.fillStyle = 'rgba(13, 15, 20, 0.8)';
+                    relationCtx.fillRect(mx - 20, my - 10, 40, 20);
+                    relationCtx.fillStyle = typeInfo.color;
+                    relationCtx.font = '12px "Noto Serif TC"';
+                    relationCtx.textAlign = 'center';
+                    relationCtx.textBaseline = 'middle';
+                    relationCtx.fillText(typeInfo.name, mx, my);
+                }
+            }
+
+            relationCtx.setLineDash([]);
+
+            // 繪製 NPC 節點
+            for (const npc of npcs) {
+                drawNode(centerX + npc.x, centerY + npc.y, npc, npc === selectedNPC);
+            }
+
+            // 繪製玩家節點
+            drawNode(centerX + playerCharacter.x, centerY + playerCharacter.y, playerCharacter, playerCharacter === selectedNPC, true);
+        }
+
+        function drawNode(x, y, node, selected, isPlayer = false) {
+            const r = isPlayer ? 35 : 28;
+
+            // 光暈
+            if (selected) {
+                const glow = relationCtx.createRadialGradient(x, y, r, x, y, r + 15);
+                glow.addColorStop(0, 'rgba(201, 162, 39, 0.4)');
+                glow.addColorStop(1, 'rgba(201, 162, 39, 0)');
+                relationCtx.fillStyle = glow;
+                relationCtx.beginPath();
+                relationCtx.arc(x, y, r + 15, 0, Math.PI * 2);
+                relationCtx.fill();
+            }
+
+            // 節點背景
+            const grad = relationCtx.createRadialGradient(x, y - r/2, 0, x, y, r);
+            if (isPlayer) {
+                grad.addColorStop(0, '#4a4030');
+                grad.addColorStop(1, '#2a2520');
+            } else {
+                const factionColor = node.faction >= 0 ? CONFIG.colors.factions[node.faction % 3] : '#3a3d4a';
+                grad.addColorStop(0, factionColor);
+                grad.addColorStop(1, '#1a1c24');
+            }
+
+            relationCtx.fillStyle = grad;
+            relationCtx.beginPath();
+            relationCtx.arc(x, y, r, 0, Math.PI * 2);
+            relationCtx.fill();
+
+            // 邊框
+            relationCtx.strokeStyle = selected ? '#c9a227' : (isPlayer ? '#c9a227' : '#5a5d6a');
+            relationCtx.lineWidth = selected ? 3 : 2;
+            relationCtx.stroke();
+
+            // 名字
+            relationCtx.fillStyle = '#d0d0c8';
+            relationCtx.font = `${isPlayer ? '14' : '12'}px "Noto Serif TC"`;
+            relationCtx.textAlign = 'center';
+            relationCtx.textBaseline = 'middle';
+            relationCtx.fillText(node.name, x, y + r + 18);
+        }
+
+        // ============ API 服務 ============
+        class GeminiService {
+            constructor() {
+                this.baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/";
+            }
+
+            async call(prompt, systemInstruction) {
+                if (!apiKey) {
+                    showError("請先設定 API Key");
+                    return null;
+                }
+
+                const url = `${this.baseUrl}gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        if (res.status === 400) showError("API Key 無效");
+                        else if (res.status === 429) showError("請求過於頻繁");
+                        else showError(`API 錯誤: ${res.status}`);
+                        return null;
+                    }
+
+                    const data = await res.json();
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) {
+                        showError("AI 回應異常");
+                        return null;
+                    }
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error(e);
+                    showError("連線失敗");
+                    return null;
+                }
+            }
+
+            async generateWorlds() {
+                const sys = `你是資深奇幻世界架構師。生成3個獨特的TRPG世界。
+每個世界需要：
+- 獨特的世界觀主題（如賽博龐克、克蘇魯、仙俠、蒸汽龐克、末日廢土等）
+- 3個主要陣營，彼此有衝突或合作關係
+- 世界的核心衝突或謎團
+
+回傳 JSON：
+{
+  "worlds": [{
+    "name": "世界名(2-4字)",
+    "theme": "主題類型",
+    "desc": "世界背景描述(50-80字)",
+    "conflict": "核心衝突(20字)",
+    "factions": [{
+      "name": "陣營名",
+      "desc": "陣營描述(30字)",
+      "stance": "立場關鍵詞"
+    }]
+  }]
+}`;
+                return await this.call("生成3個獨特的TRPG世界設定", sys);
+            }
+
+            async generateOpeningScene(world) {
+                const sys = `你是TRPG遊戲主持人。世界：${world.name} - ${world.desc}
+陣營：${world.factions.map(f => f.name).join('、')}
+
+生成遊戲開場：
+1. 描述玩家醒來/抵達的場景
+2. 介紹第一個遇到的NPC（將成為重要角色）
+3. 給予3個行動選項
+
+NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角色的潛在關係
+
+回傳 JSON：
+{
+  "story": "開場劇情描述(100-150字)",
+  "newNPC": {
+    "id": "npc_001",
+    "name": "NPC名字",
+    "role": "身份/職業",
+    "desc": "外貌與性格描述(50字)",
+    "faction": 0,
+    "personality": "性格關鍵詞",
+    "secret": "隱藏的秘密或目的"
+  },
+  "options": [{
+    "text": "選項文字",
+    "type": "normal/risk/focus",
+    "factionIndex": 0,
+    "timeAdvance": 1
+  }],
+  "potentialRelations": [{
+    "targetId": "player",
+    "type": "neutral",
+    "reason": "關係原因"
+  }]
+}`;
+                return await this.call("生成開場場景", sys);
+            }
+
+            async generateNextScene(world, context, action, factions, npcs, calendar) {
+                const npcList = npcs.map(n => `${n.name}(${n.role})`).join('、');
+                const sys = `你是TRPG遊戲主持人。
+世界：${world.name}
+目前時間：${calendar.getString()} ${calendar.getTimeString()}
+已知NPC：${npcList || '無'}
+陣營聲望：${JSON.stringify(factions)}
+
+根據玩家行動推進劇情。
+
+規則：
+1. 可能遇到新NPC（機率30%），新NPC需要完整設定
+2. 可能觸發命運事件（機率20%），獎勵命運點
+3. 選項需標註時間消耗（1=一個時段，2=半天，4=一整天）
+4. risk類型選項風險更高但可能獲得更多命運點
+5. focus類型選項可深入了解某角色，可能揭示關係
+
+回傳 JSON：
+{
+  "story": "劇情描述(100-150字)",
+  "newNPC": null 或 { "id": "npc_xxx", "name": "", "role": "", "desc": "", "faction": 0, "personality": "", "secret": "" },
+  "options": [{ "text": "", "type": "normal/risk/focus", "factionIndex": -1, "timeAdvance": 1 }],
+  "fateEvent": null 或 { "name": "事件名", "points": 3, "desc": "事件描述" },
+  "newRelations": [],
+  "revealedRelations": []
+}`;
+                const prompt = `前情：${context}\n\n玩家行動：${action}`;
+                return await this.call(prompt, sys);
+            }
+
+            async summarizeHistory(world, log) {
+                const sys = `你是吟遊詩人。將冒險紀錄整理成詩意的編年史。使用優美的文學語言，但保持簡潔。回傳 JSON: { "content": "Markdown格式的故事" }`;
+                const logText = log.slice(-20).map(h => `[${h.role}]: ${h.text}`).join("\n");
+                return await this.call(`世界：${world.name}\n紀錄:\n${logText}`, sys);
+            }
+        }
+
+        const aiService = new GeminiService();
+
+        // ============ UI 元件 ============
+        let buttons = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * canvasWidth;
+                this.y = Math.random() * canvasHeight;
+                this.r = Math.random() * 1.5 + 0.5;
+                this.speed = Math.random() * 0.2 + 0.05;
+                this.alpha = Math.random() * 0.3 + 0.1;
+                this.drift = (Math.random() - 0.5) * 0.1;
+            }
+            update() {
+                this.y -= this.speed;
+                this.x += this.drift;
+                if (this.y < -10) {
+                    this.y = canvasHeight + 10;
+                    this.x = Math.random() * canvasWidth;
+                }
+            }
+            draw() {
+                ctx.fillStyle = `rgba(200, 180, 140, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class FloatingText {
+            constructor(text, x, y, color) {
+                this.text = text;
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.alpha = 1;
+                this.vy = -1;
+            }
+            update() {
+                this.y += this.vy;
+                this.alpha -= 0.015;
+                return this.alpha > 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.font = '700 20px "Noto Serif TC"';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function showFloatingText(text, x, y, color) {
+            floatingTexts.push(new FloatingText(text, x, y, color));
+        }
+
+        class Button {
+            constructor(text, x, y, w, h, callback, type = 'normal') {
+                this.text = text;
+                this.rect = { x, y, w, h };
+                this.callback = callback;
+                this.type = type;
+                this.hover = false;
+                this.hoverAnim = 0;
+            }
+            update() {
+                const { x, y, w, h } = this.rect;
+                const inBounds = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+                this.hover = inBounds;
+                this.hoverAnim += (inBounds ? 0.15 : -0.1);
+                this.hoverAnim = Math.max(0, Math.min(1, this.hoverAnim));
+            }
+            draw() {
+                const { x, y, w, h } = this.rect;
+                const anim = this.hoverAnim * 3;
+
+                ctx.save();
+
+                // 背景
+                if (this.type === 'world') {
+                    ctx.fillStyle = this.hover ? 'rgba(50, 45, 40, 0.95)' : 'rgba(30, 28, 25, 0.9)';
+                    ctx.strokeStyle = this.hover ? CONFIG.colors.textGold : '#3a3530';
+                } else if (this.type === 'start') {
+                    ctx.fillStyle = this.hover ? CONFIG.colors.textGold : 'rgba(40, 35, 30, 0.9)';
+                    ctx.strokeStyle = CONFIG.colors.textGold;
+                } else if (this.type === 'risk') {
+                    ctx.fillStyle = 'rgba(70, 30, 30, 0.9)';
+                    ctx.strokeStyle = CONFIG.colors.relationColors.enemy;
+                } else if (this.type === 'focus') {
+                    ctx.fillStyle = 'rgba(30, 40, 60, 0.9)';
+                    ctx.strokeStyle = '#6080b0';
+                } else {
+                    ctx.fillStyle = this.hover ? 'rgba(50, 48, 45, 0.95)' : 'rgba(35, 33, 30, 0.9)';
+                    ctx.strokeStyle = this.hover ? CONFIG.colors.textGold : '#4a4540';
+                }
+
+                ctx.lineWidth = 1.5;
+                if (this.hover) {
+                    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                    ctx.shadowBlur = 10;
+                }
+
+                // 繪製
+                const dx = x - anim/2, dy = y - anim, dw = w + anim, dh = h + anim/2;
+                ctx.beginPath();
+                this.roundRect(ctx, dx, dy, dw, dh, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // 文字
+                ctx.font = this.type === 'world' ? fonts.display : 
+                           this.type === 'start' ? `700 ${isMobile ? 18 : 22}px "Noto Serif TC"` :
+                           `700 ${isMobile ? 16 : 18}px "Noto Serif TC"`;
+                ctx.fillStyle = (this.type === 'start' && this.hover) ? '#0d0f14' : 
+                                (this.hover ? '#fff' : CONFIG.colors.textPrimary);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                let disp = this.text;
+                if (this.type === 'risk') disp = `⚠️ ${this.text}`;
+                else if (this.type === 'focus') disp = `👁️ ${this.text}`;
+
+                // 時間標記
+                if (this.timeAdvance) {
+                    const timeStr = this.timeAdvance === 1 ? '⏱' : 
+                                   this.timeAdvance === 2 ? '⏱⏱' : '⏱⏱⏱';
+                    disp = `${disp} ${timeStr}`;
+                }
+
+                this.wrapText(ctx, disp, x + w/2, y + h/2 - anim, w - 20);
+                ctx.restore();
+            }
+            roundRect(ctx, x, y, w, h, r) {
+                ctx.moveTo(x+r, y);
+                ctx.lineTo(x+w-r, y);
+                ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+                ctx.lineTo(x+w, y+h-r);
+                ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+                ctx.lineTo(x+r, y+h);
+                ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+                ctx.lineTo(x, y+r);
+                ctx.quadraticCurveTo(x, y, x+r, y);
+                ctx.closePath();
+            }
+            wrapText(ctx, text, x, centerY, maxW) {
+                const lines = [];
+                let line = '';
+                for (const char of text) {
+                    if (ctx.measureText(line + char).width > maxW && line) {
+                        lines.push(line);
+                        line = char;
+                    } else line += char;
+                }
+                lines.push(line);
+                const lh = isMobile ? 22 : 26;
+                const startY = centerY - ((lines.length - 1) * lh) / 2;
+                lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lh));
+            }
+        }
+
+        class Typewriter {
+            constructor() { this.text = ""; this.idx = 0; this.done = true; }
+            start(text) {
+                this.text = text;
+                this.idx = 0;
+                this.done = false;
+            }
+            skip() { this.idx = this.text.length; this.done = true; }
+            update() {
+                if (this.done) return;
+                this.idx += isMobile ? 0.7 : 0.5;
+                if (this.idx >= this.text.length) {
+                    this.idx = this.text.length;
+                    this.done = true;
+                    onTypingComplete();
+                }
+            }
+            draw() {
+                if (currentState === STATE.LOADING || currentState === STATE.INIT || 
+                    currentState === STATE.WORLD_SELECT || currentState === STATE.WORLD_INTRO) return;
+
+                const maxW = Math.min(canvasWidth - 40, 700);
+                const startX = (canvasWidth - maxW) / 2;
+                const startY = isMobile ? 95 : 120;
+                const lh = isMobile ? 30 : 36;
+
+                ctx.save();
+                ctx.font = fonts.body;
+                ctx.fillStyle = CONFIG.colors.textPrimary;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 2;
+
+                const str = this.text.substring(0, Math.floor(this.idx));
+                let line = '', cy = startY;
+                for (const char of str) {
+                    if (ctx.measureText(line + char).width > maxW && line) {
+                        ctx.fillText(line, startX, cy);
+                        line = char;
+                        cy += lh;
+                    } else line += char;
+                }
+                ctx.fillText(line, startX, cy);
+                ctx.restore();
+            }
+        }
+
+        const typewriter = new Typewriter();
+
+        // ============ 陣營 HUD ============
+        function drawFactionHUD() {
+            if (!currentWorld || currentState < STATE.TYPING) return;
+
+            const pad = 10;
+            let boxW, boxH, startX, startY;
+
+            if (isMobile) {
+                return; // 手機版暫時隱藏
+            } else {
+                boxW = 180;
+                boxH = 110;
+                startX = canvasWidth - boxW - 20;
+                startY = 70;
+            }
+
+            ctx.save();
+            ctx.fillStyle = CONFIG.colors.panelBg;
+            ctx.strokeStyle = CONFIG.colors.panelBorder;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(startX, startY, boxW, boxH, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = CONFIG.colors.textDim;
+            ctx.font = fonts.small;
+            ctx.textAlign = 'center';
+            ctx.fillText("陣營聲望", startX + boxW/2, startY + 18);
+
+            let cy = startY + 38;
+            factionData.forEach((f, i) => {
+                ctx.font = fonts.small;
+                ctx.textAlign = 'left';
+                ctx.fillStyle = CONFIG.colors.textPrimary;
+                ctx.fillText(f.name, startX + pad, cy);
+
+                ctx.textAlign = 'right';
+                ctx.fillStyle = CONFIG.colors.factions[i];
+                ctx.fillText(f.rep, startX + boxW - pad, cy);
+
+                cy += 6;
+                const barW = boxW - pad*2;
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                ctx.fillRect(startX + pad, cy, barW, 3);
+                ctx.fillStyle = CONFIG.colors.factions[i];
+                ctx.fillRect(startX + pad, cy, (f.rep/100)*barW, 3);
+                cy += 18;
+            });
+
+            ctx.restore();
+        }
+
+        // ============ 模態控制 ============
+        function toggleRelationModal(show) {
+            document.getElementById('relation-modal').classList.toggle('show', show);
+            if (show) {
+                initRelationCanvas();
+                drawRelationNetwork();
+            }
+        }
+
+        function toggleLogModal(show) {
+            document.getElementById('log-modal').classList.toggle('show', show);
+        }
+
+        function toggleSettingsModal(show) {
+            document.getElementById('settings-modal').classList.toggle('show', show);
+            if (show) document.getElementById('api-key-input').value = apiKey;
+        }
+
+        function toggleWorldIntroModal(show) {
+            document.getElementById('world-intro-modal').classList.toggle('show', show);
+        }
+
+        function showError(msg) {
+            const toast = document.getElementById('error-toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (!key) { showError("請輸入 API Key"); return; }
+            apiKey = key;
+            localStorage.setItem('gemini_api_key', key);
+            toggleSettingsModal(false);
+            if (currentState === STATE.INIT) startWorldGeneration();
+        }
+
+        // ============ 事件處理 ============
+        document.getElementById('btn-relation').addEventListener('click', () => toggleRelationModal(true));
+        document.getElementById('btn-sound').addEventListener('click', () => {
+            isSoundOn = !isSoundOn;
+            document.getElementById('btn-sound').textContent = isSoundOn ? '🔊' : '🔇';
+            document.getElementById('btn-sound').classList.toggle('active', isSoundOn);
+        });
+        document.getElementById('btn-log').addEventListener('click', async () => {
+            if (!currentWorld) { showError("請先開始遊戲"); return; }
+            toggleLogModal(true);
+            document.getElementById('log-body').innerHTML = '🖋️ 正在撰寫編年史...';
+            const res = await aiService.summarizeHistory(currentWorld, historyLog);
+            document.getElementById('log-body').innerHTML = res?.content?.replace(/\n/g, '<br>') || '紀錄不足...';
+        });
+        document.getElementById('btn-settings').addEventListener('click', () => toggleSettingsModal(true));
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                toggleRelationModal(false);
+                toggleLogModal(false);
+                toggleSettingsModal(false);
+                toggleWorldIntroModal(false);
+            }
+        });
+
+        // Canvas 事件
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('click', handleClick);
+
+        let touchStart = 0;
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            touchStart = Date.now();
+            const t = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            mouseX = t.clientX - rect.left;
+            mouseY = t.clientY - rect.top;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            mouseX = t.clientX - rect.left;
+            mouseY = t.clientY - rect.top;
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', e => {
+            e.preventDefault();
+            if (Date.now() - touchStart < 300) handleClick();
+        }, { passive: false });
+
+        function handleClick() {
+            if (currentState === STATE.TYPING) {
+                typewriter.skip();
+            } else {
+                for (const b of buttons) {
+                    if (b.hover) { b.callback(); break; }
+                }
+            }
+        }
+
+        // ============ 遊戲流程 ============
+        function init() {
+            resize();
+            window.addEventListener('resize', resize);
+            for (let i = 0; i < 30; i++) particles.push(new Particle());
+            currentState = STATE.INIT;
+            createStartButton();
+            loop();
+        }
+
+        function resize() {
+            const dpr = window.devicePixelRatio || 1;
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            isMobile = canvasWidth < 600;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            fonts = CONFIG.getFonts(isMobile);
+            particles.forEach(p => { p.x = Math.random() * canvasWidth; p.y = Math.random() * canvasHeight; });
+            recalcLayout();
+        }
+
+        function recalcLayout() {
+            if (currentState === STATE.INIT) createStartButton();
+            else if (currentState === STATE.WORLD_SELECT) setupWorldSelectUI();
+            else if (currentState === STATE.CHOICE) generateOptionsUI();
+        }
+
+        function createStartButton() {
+            const btnW = isMobile ? canvasWidth * 0.7 : 280;
+            const btnH = 55;
+            buttons = [new Button("啟動創世引擎", canvasWidth/2 - btnW/2, canvasHeight/2 - btnH/2, btnW, btnH, () => {
+                if (!apiKey) toggleSettingsModal(true);
+                else startWorldGeneration();
+            }, 'start')];
+        }
+
+        async function startWorldGeneration() {
+            currentState = STATE.LOADING;
+            loadingText = "✧ 編織世界線...";
+            const data = await aiService.generateWorlds();
+            if (data?.worlds?.length) {
+                generatedWorlds = data.worlds;
+                setupWorldSelectUI();
+            } else {
+                currentState = STATE.INIT;
+                createStartButton();
+            }
+        }
+
+        function setupWorldSelectUI() {
+            currentState = STATE.WORLD_SELECT;
+            buttons = [];
+            const gap = isMobile ? 12 : 20;
+            const cardW = isMobile ? canvasWidth * 0.85 : 260;
+            const cardH = isMobile ? 70 : 100;
+            const totalH = generatedWorlds.length * cardH + (generatedWorlds.length - 1) * gap;
+            const startY = (canvasHeight - totalH) / 2;
+            const startX = (canvasWidth - cardW) / 2;
+
+            generatedWorlds.forEach((w, i) => {
+                buttons.push(new Button(w.name, startX, startY + i * (cardH + gap), cardW, cardH, () => showWorldIntro(w), 'world'));
+            });
+        }
+
+        function showWorldIntro(world) {
+            currentWorld = world;
+            
+            let factionsHTML = world.factions.map((f, i) => `
+                <div class="faction-card" style="border-left: 3px solid ${CONFIG.colors.factions[i]};">
+                    <h4>${f.name}</h4>
+                    <p>${f.desc}</p>
+                </div>
+            `).join('');
+
+            document.getElementById('world-intro-content').innerHTML = `
+                <h2>${world.name}</h2>
+                <div class="desc">${world.desc}</div>
+                ${world.conflict ? `<div style="color:#c9a227;font-size:16px;margin-bottom:20px;">「${world.conflict}」</div>` : ''}
+                <div class="factions">${factionsHTML}</div>
+                <button class="start-adventure-btn" onclick="beginAdventure()">踏入命運</button>
+            `;
+
+            toggleWorldIntroModal(true);
+        }
+
+        async function beginAdventure() {
+            toggleWorldIntroModal(false);
+
+            // 重置系統
+            CALENDAR.reset();
+            fatePoints = 0;
+            npcs = [];
+            relationships = [];
+            historyLog = [];
+            playerCharacter.x = 0;
+            playerCharacter.y = 0;
+
+            // 初始化陣營
+            factionData = currentWorld.factions.map(f => ({ name: f.name, rep: 50 }));
+
+            // 顯示 UI
+            document.getElementById('calendar-display').style.display = 'block';
+            document.getElementById('fate-display').style.display = 'flex';
+            document.getElementById('fate-value').textContent = '0';
+            CALENDAR.updateDisplay();
+            updateNPCBadge();
+
+            // 生成開場
+            currentState = STATE.LOADING;
+            loadingText = "✧ 命運之輪轉動...";
+            storyContext = `${currentWorld.name}：${currentWorld.desc}`;
+
+            const res = await aiService.generateOpeningScene(currentWorld);
+            if (res) {
+                processSceneResult(res, "冒險開始");
+            } else {
+                showError("場景生成失敗");
+                currentState = STATE.INIT;
+                createStartButton();
+            }
+        }
+
+        async function triggerSceneGeneration(action, timeAdvance = 1) {
+            currentState = STATE.LOADING;
+            loadingText = "✧ 命運推演中...";
+
+            // 時間流逝
+            CALENDAR.advance(timeAdvance);
+
+            historyLog.push({ role: 'Player', text: action });
+
+            const res = await aiService.generateNextScene(
+                currentWorld,
+                storyContext,
+                action,
+                factionData,
+                npcs,
+                CALENDAR
+            );
+
+            if (res) {
+                processSceneResult(res, action);
+            } else {
+                loadingText = "連線中斷...";
+                buttons = [new Button("重試", canvasWidth/2 - 60, canvasHeight/2 + 50, 120, 50, () => triggerSceneGeneration(action, timeAdvance))];
+            }
+        }
+
+        function processSceneResult(res, action) {
+            storyContext = res.story;
+            currentOptions = res.options || [];
+            historyLog.push({ role: 'GM', text: res.story });
+
+            // 新 NPC
+            if (res.newNPC) {
+                addNPC(res.newNPC);
+                // 添加與玩家的初始關係
+                if (res.potentialRelations) {
+                    for (const rel of res.potentialRelations) {
+                        if (rel.targetId === 'player') {
+                            addRelationship(res.newNPC.id, 'player', rel.type, true);
+                        }
+                    }
+                } else {
+                    addRelationship(res.newNPC.id, 'player', 'neutral', true);
+                }
+            }
+
+            // 新關係
+            if (res.newRelations) {
+                for (const rel of res.newRelations) {
+                    addRelationship(rel.from, rel.to, rel.type, rel.revealed || false);
+                }
+            }
+
+            // 揭示關係
+            if (res.revealedRelations) {
+                for (const rel of res.revealedRelations) {
+                    revealRelationship(rel.from, rel.to);
+                }
+            }
+
+            // 命運事件
+            if (res.fateEvent) {
+                setTimeout(() => {
+                    addFatePoints(res.fateEvent.points);
+                    historyLog.push({ role: 'Fate', text: `【${res.fateEvent.name}】${res.fateEvent.desc} (+${res.fateEvent.points}命運點)` });
+                }, 1500);
+            }
+
+            currentState = STATE.TYPING;
+            typewriter.start(res.story);
+        }
+
+        function onTypingComplete() {
+            currentState = STATE.CHOICE;
+            generateOptionsUI();
+        }
+
+        function generateOptionsUI() {
+            buttons = [];
+            const btnW = Math.min(isMobile ? canvasWidth * 0.9 : 480, canvasWidth - 30);
+            const btnH = isMobile ? 55 : 58;
+            const gap = isMobile ? 10 : 14;
+            const totalH = currentOptions.length * btnH + (currentOptions.length - 1) * gap;
+            const startY = canvasHeight - totalH - (isMobile ? 90 : 70);
+            const centerX = (canvasWidth - btnW) / 2;
+
+            currentOptions.forEach((opt, i) => {
+                const btn = new Button(
+                    opt.text,
+                    centerX,
+                    startY + i * (btnH + gap),
+                    btnW,
+                    btnH,
+                    () => handleOption(opt),
+                    opt.type || 'normal'
+                );
+                btn.timeAdvance = opt.timeAdvance || 1;
+                buttons.push(btn);
+            });
+        }
+
+        function handleOption(opt) {
+            // 陣營聲望
+            if (opt.factionIndex >= 0 && opt.factionIndex < factionData.length) {
+                const change = opt.type === 'risk' ? 8 : 4;
+                factionData[opt.factionIndex].rep = Math.min(100, factionData[opt.factionIndex].rep + change);
+            }
+            triggerSceneGeneration(opt.text, opt.timeAdvance || 1);
+        }
+
+        // ============ 主迴圈 ============
+        function loop() {
+            requestAnimationFrame(loop);
+
+            // 背景
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // 粒子
+            particles.forEach(p => { p.update(); p.draw(); });
+
+            // 暈影
+            const grad = ctx.createRadialGradient(canvasWidth/2, canvasHeight/2, canvasHeight*0.15, canvasWidth/2, canvasHeight/2, canvasHeight*0.85);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // 載入中
+            if (currentState === STATE.LOADING) {
+                ctx.fillStyle = '#8090a0';
+                ctx.font = fonts.displayLarge;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const pulse = 1 + Math.sin(Date.now() / 300) * 0.02;
+                ctx.save();
+                ctx.translate(canvasWidth/2, canvasHeight/2);
+                ctx.scale(pulse, pulse);
+                ctx.fillText(loadingText, 0, 0);
+                ctx.restore();
+            }
+
+            // 遊戲面板
+            if (currentState >= STATE.TYPING) {
+                const panelH = isMobile ? canvasHeight * 0.42 : canvasHeight * 0.38;
+                const panelY = canvasHeight - panelH;
+                ctx.fillStyle = CONFIG.colors.panelBg;
+                ctx.fillRect(0, panelY, canvasWidth, panelH);
+                ctx.beginPath();
+                ctx.moveTo(0, panelY);
+                ctx.lineTo(canvasWidth, panelY);
+                ctx.strokeStyle = CONFIG.colors.panelBorder;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // HUD
+            drawFactionHUD();
+
+            // 打字機
+            typewriter.update();
+            typewriter.draw();
+
+            // 按鈕
+            buttons.forEach(b => { b.update(); b.draw(); });
+
+            // 浮動文字
+            floatingTexts = floatingTexts.filter(ft => {
+                const alive = ft.update();
+                if (alive) ft.draw();
+                return alive;
+            });
+        }
+
+        // 啟動
+        init();
+    </script>
+</body>
+</html>
