@@ -188,6 +188,11 @@ async function startAdventureWithCharacter() {
     historyLog = [];
     factionData = currentWorld.factions.map(f => ({ name: f.name, rep: 50 }));
 
+    // 清空存檔點（命運長河）以開始全新冒險
+    if (typeof clearSavePoints === 'function') {
+        clearSavePoints();
+    }
+
     // 應用背景加成
     const bgInfo = BACKGROUND_INFO[playerCharacter.background];
     if(bgInfo.factionBonus >= 0) factionData[bgInfo.factionBonus].rep += 15;
