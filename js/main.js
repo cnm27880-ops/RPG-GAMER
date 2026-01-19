@@ -187,10 +187,16 @@ async function startAdventureWithCharacter() {
     relationships = [];
     historyLog = [];
     factionData = currentWorld.factions.map(f => ({ name: f.name, rep: 50 }));
-    
+
     // 應用背景加成
     const bgInfo = BACKGROUND_INFO[playerCharacter.background];
     if(bgInfo.factionBonus >= 0) factionData[bgInfo.factionBonus].rep += 15;
+
+    // 顯示 UI 元素
+    document.getElementById('calendar-display').style.display = 'block';
+    document.getElementById('fate-display').style.display = 'flex';
+    document.getElementById('fate-value').textContent = fatePoints;
+    CALENDAR.updateDisplay();
 
     currentState = STATE.LOADING;
     loadingText = "✧ 命運之輪轉動...";

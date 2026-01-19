@@ -519,6 +519,8 @@ let relationOffset = { x: 0, y: 0 };
 
 function initRelationCanvas() {
     relationCanvas = document.getElementById('relationCanvas');
+    if (!relationCanvas) return;
+
     relationCtx = relationCanvas.getContext('2d');
     const rect = relationCanvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -526,12 +528,38 @@ function initRelationCanvas() {
     relationCanvas.height = rect.height * dpr;
     relationCtx.scale(dpr, dpr);
 
+    // 移除舊的事件監聽器（避免重複綁定）
+    relationCanvas.onmousedown = null;
+    relationCanvas.onmousemove = null;
+    relationCanvas.onmouseup = null;
+    relationCanvas.onclick = null;
+
+    // 綁定新的事件監聽器
     relationCanvas.onmousedown = onRelationMouseDown;
     relationCanvas.onmousemove = onRelationMouseMove;
     relationCanvas.onmouseup = onRelationMouseUp;
-    relationCanvas.ontouchstart = (e) => { e.preventDefault(); onRelationMouseDown(e); };
-    relationCanvas.ontouchmove = (e) => { e.preventDefault(); onRelationMouseMove(e); };
-    relationCanvas.ontouchend = (e) => { e.preventDefault(); onRelationMouseUp(e); };
+
+    // 觸控事件處理
+    relationCanvas.ontouchstart = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        if (touch) {
+            const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+            onRelationMouseDown(fakeEvent);
+        }
+    };
+    relationCanvas.ontouchmove = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        if (touch) {
+            const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+            onRelationMouseMove(fakeEvent);
+        }
+    };
+    relationCanvas.ontouchend = (e) => {
+        e.preventDefault();
+        onRelationMouseUp(e);
+    };
 }
 
 function getRelationCanvasCoords(e) {
@@ -541,11 +569,15 @@ function getRelationCanvasCoords(e) {
     return { x, y };
 }
 
+let relationStartPos = { x: 0, y: 0 };
+
 function onRelationMouseDown(e) {
     const { x, y } = getRelationCanvasCoords(e);
+    relationStartPos = { x, y };
+
     const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
     const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
-    
+
     // 檢查節點點擊
     let nodes = [playerCharacter, ...npcs];
     for(let n of nodes) {
@@ -571,13 +603,14 @@ function onRelationMouseMove(e) {
 
 function onRelationMouseUp(e) {
     if(relationDragging) {
-        const { x, y } = getRelationCanvasCoords(e);
-        const centerX = relationCanvas.width / (window.devicePixelRatio || 1) / 2;
-        const centerY = relationCanvas.height / (window.devicePixelRatio || 1) / 2;
-        let dist = Math.hypot(x - (centerX + relationDragging.x), y - (centerY + relationDragging.y));
-        if(dist < 5) { // 視為點擊
+        // 計算拖曳距離（使用起始位置比較）
+        const currentPos = e.clientX !== undefined ? getRelationCanvasCoords(e) : relationStartPos;
+        const dist = Math.hypot(currentPos.x - relationStartPos.x, currentPos.y - relationStartPos.y);
+
+        if(dist < 10) { // 移動距離小於10px視為點擊
             selectedNPC = relationDragging;
             showNPCDetail(selectedNPC);
+            drawRelationNetwork(); // 重繪以顯示選中狀態
         }
         relationDragging = null;
     }
@@ -633,4 +666,47 @@ function showNPCDetail(node) {
     let html = `<h3>${node.name}</h3><div class="desc">${node.desc||'無描述'}</div>`;
     panel.innerHTML = html;
     panel.classList.add('show');
+}
+
+// --- 6. 時間線渲染 ---
+function renderTimeline() {
+    const container = document.getElementById('timeline-content');
+    if (!container) return;
+
+    if (!savePoints || savePoints.length === 0) {
+        container.innerHTML = '<div class="timeline-empty">尚無存檔點。冒險中的重要抉擇會自動記錄於此。</div>';
+        return;
+    }
+
+    container.innerHTML = savePoints.map((sp, index) => `
+        <div class="timeline-item ${sp.isMajor ? 'major' : ''}" data-id="${sp.id}" onclick="toggleTimelineDetail('${sp.id}')">
+            <div class="timeline-date">${sp.calendarString}</div>
+            <div class="timeline-name">${sp.name}</div>
+            <div class="timeline-detail" id="detail-${sp.id}">
+                <div class="timeline-detail-row">
+                    <span>記錄時間</span>
+                    <span>${new Date(sp.timestamp).toLocaleString()}</span>
+                </div>
+                <div class="timeline-detail-row">
+                    <span>命運點</span>
+                    <span>${sp.snapshot?.fatePoints || 0}</span>
+                </div>
+                <div class="timeline-detail-row">
+                    <span>已知NPC</span>
+                    <span>${sp.snapshot?.npcs?.length || 0} 人</span>
+                </div>
+                <button class="timeline-revert-btn" onclick="event.stopPropagation();revertToSavePoint('${sp.id}')">
+                    ⏪ 回溯到此節點
+                    <span class="timeline-cost">（消耗 ${sp.isMajor ? 8 : 5} 命運點）</span>
+                </button>
+            </div>
+        </div>
+    `).reverse().join('');
+}
+
+function toggleTimelineDetail(savePointId) {
+    const detail = document.getElementById(`detail-${savePointId}`);
+    if (detail) {
+        detail.classList.toggle('show');
+    }
 }
