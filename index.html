@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gemini RPG Engine V8 - 命運織網</title>
+    <title>Gemini RPG Engine V9 - 命運織網</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200;400;700;900&display=swap');
 
@@ -15,7 +15,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #0d0f14;
+            background-color: #15171e;
             font-family: 'Noto Serif TC', serif;
             -webkit-tap-highlight-color: transparent;
         }
@@ -444,6 +444,456 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0d0f14; }
         ::-webkit-scrollbar-thumb { background: #3a3d4a; border-radius: 3px; }
+
+        /* 角色創建表單 */
+        .character-create-form {
+            padding: 10px;
+        }
+
+        .character-create-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .character-create-form label {
+            display: block;
+            font-size: 14px;
+            color: #deb887;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .character-create-form input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: #15171e;
+            border: 1px solid #4a4d5e;
+            border-radius: 6px;
+            color: #d8d8d0;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .character-create-form input[type="text"]:focus {
+            border-color: #deb887;
+        }
+
+        .character-create-form select {
+            width: 100%;
+            padding: 12px;
+            background: #15171e;
+            border: 1px solid #4a4d5e;
+            border-radius: 6px;
+            color: #d8d8d0;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .character-create-form select:focus {
+            border-color: #deb887;
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .radio-item, .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #1a1c24;
+            border: 1px solid #3a3d4a;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-item:hover, .checkbox-item:hover {
+            border-color: #deb887;
+        }
+
+        .radio-item input, .checkbox-item input {
+            display: none;
+        }
+
+        .radio-item input:checked + span,
+        .checkbox-item input:checked + span {
+            color: #deb887;
+        }
+
+        .radio-item:has(input:checked),
+        .checkbox-item:has(input:checked) {
+            border-color: #deb887;
+            background: rgba(222, 184, 135, 0.1);
+        }
+
+        .radio-item span, .checkbox-item span {
+            color: #a0a5b0;
+            font-size: 14px;
+        }
+
+        .checkbox-item small {
+            color: #6a6d7a;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+
+        .stat-allocator {
+            background: #15171e;
+            border: 1px solid #3a3d4a;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-name {
+            color: #d8d8d0;
+            font-weight: 700;
+            font-size: 14px;
+            min-width: 80px;
+        }
+
+        .stat-desc {
+            color: #6a6d7a;
+            font-size: 12px;
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .stat-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid #4a4d5e;
+            background: #1a1c24;
+            color: #d8d8d0;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .stat-btn:hover {
+            border-color: #deb887;
+            color: #deb887;
+        }
+
+        .stat-value {
+            color: #deb887;
+            font-weight: 900;
+            font-size: 18px;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .stat-row {
+                flex-wrap: wrap;
+            }
+            .stat-desc {
+                width: 100%;
+                margin: 5px 0;
+                order: 3;
+            }
+            .stat-controls {
+                margin-left: auto;
+            }
+        }
+
+        /* 命運長河時間線 */
+        .timeline-container {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 20px 10px;
+        }
+
+        .timeline-empty {
+            text-align: center;
+            color: #6a6d7a;
+            padding: 40px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 15px 20px;
+            margin-left: 30px;
+            border-left: 2px solid #3a3d4a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .timeline-item:hover {
+            background: rgba(222, 184, 135, 0.05);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 20px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #3a3d4a;
+            border: 2px solid #15171e;
+        }
+
+        .timeline-item.major::before {
+            background: linear-gradient(135deg, #deb887, #c9a227);
+            box-shadow: 0 0 10px rgba(222, 184, 135, 0.5);
+        }
+
+        .timeline-item.selected {
+            background: rgba(222, 184, 135, 0.1);
+            border-left-color: #deb887;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            color: #8f919c;
+            margin-bottom: 5px;
+        }
+
+        .timeline-name {
+            font-size: 15px;
+            color: #d8d8d0;
+            font-weight: 700;
+        }
+
+        .timeline-item.major .timeline-name {
+            color: #deb887;
+        }
+
+        .timeline-detail {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .timeline-detail.show {
+            display: block;
+        }
+
+        .timeline-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 13px;
+            color: #a0a5b0;
+        }
+
+        .timeline-detail-row span:first-child {
+            color: #6a6d7a;
+        }
+
+        .timeline-revert-btn {
+            width: 100%;
+            margin-top: 15px;
+            padding: 12px;
+            background: linear-gradient(135deg, #4a3a6a, #3a2a5a);
+            border: 1px solid #5a4a7a;
+            border-radius: 6px;
+            color: #c0a0e0;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .timeline-revert-btn:hover {
+            background: linear-gradient(135deg, #5a4a7a, #4a3a6a);
+            box-shadow: 0 0 15px rgba(160, 120, 200, 0.3);
+        }
+
+        .timeline-revert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .timeline-cost {
+            font-size: 12px;
+            color: #8f919c;
+        }
+
+        /* 擲骰檢定 Overlay */
+        .dice-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .dice-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .dice-container {
+            text-align: center;
+            max-width: 400px;
+            padding: 30px;
+        }
+
+        .dice-title {
+            font-size: 20px;
+            color: #deb887;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .dice-attribute {
+            font-size: 14px;
+            color: #8f919c;
+            margin-bottom: 20px;
+        }
+
+        .dice-display {
+            font-size: 72px;
+            font-weight: 900;
+            color: #d8d8d0;
+            margin: 20px 0;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .dice-display.rolling {
+            animation: diceRoll 0.1s infinite;
+        }
+
+        .dice-display.success {
+            color: #80c090;
+            text-shadow: 0 0 30px rgba(100, 200, 140, 0.5);
+        }
+
+        .dice-display.failure {
+            color: #c07070;
+            text-shadow: 0 0 30px rgba(200, 100, 100, 0.5);
+        }
+
+        @keyframes diceRoll {
+            0% { transform: rotate(-5deg) scale(1.05); }
+            50% { transform: rotate(5deg) scale(0.95); }
+            100% { transform: rotate(-5deg) scale(1.05); }
+        }
+
+        .dice-threshold {
+            font-size: 14px;
+            color: #8f919c;
+            margin-bottom: 20px;
+        }
+
+        .dice-result-text {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 20px 0;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .dice-result-text.show {
+            opacity: 1;
+        }
+
+        .dice-result-text.success {
+            color: #80c090;
+        }
+
+        .dice-result-text.failure {
+            color: #c07070;
+        }
+
+        .dice-reroll-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .dice-reroll-section.show {
+            opacity: 1;
+        }
+
+        .dice-reroll-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #4a3a6a, #3a2a5a);
+            border: 1px solid #5a4a7a;
+            border-radius: 8px;
+            color: #c0a0e0;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 10px;
+        }
+
+        .dice-reroll-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #5a4a7a, #4a3a6a);
+            box-shadow: 0 0 15px rgba(160, 120, 200, 0.3);
+        }
+
+        .dice-reroll-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .dice-continue-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #3a4a3a, #2a3a2a);
+            border: 1px solid #4a5a4a;
+            border-radius: 8px;
+            color: #a0c0a0;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 10px;
+        }
+
+        .dice-continue-btn:hover {
+            background: linear-gradient(135deg, #4a5a4a, #3a4a3a);
+        }
+
+        .dice-stat-bonus {
+            font-size: 12px;
+            color: #6a6d7a;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -473,6 +923,7 @@
             🕸️
             <span class="badge" id="npc-count" style="display:none;">0</span>
         </button>
+        <button id="btn-timeline" class="tool-btn" title="命運長河">⏳</button>
         <button id="btn-sound" class="tool-btn" title="語音旁白">🔇</button>
         <button id="btn-log" class="tool-btn" title="冒險編年史">📜</button>
         <button id="btn-settings" class="tool-btn" title="設定">⚙️</button>
@@ -480,6 +931,26 @@
 
     <!-- 錯誤提示 -->
     <div id="error-toast" class="error-toast" role="alert"></div>
+
+    <!-- 擲骰檢定 Overlay -->
+    <div id="dice-overlay" class="dice-overlay">
+        <div class="dice-container">
+            <div class="dice-title" id="dice-title">命運檢定</div>
+            <div class="dice-attribute" id="dice-attribute">力量檢定</div>
+            <div class="dice-display" id="dice-display">?</div>
+            <div class="dice-threshold" id="dice-threshold">目標：8 以上</div>
+            <div class="dice-result-text" id="dice-result-text">成功！</div>
+            <div class="dice-stat-bonus" id="dice-stat-bonus"></div>
+            <div class="dice-reroll-section" id="dice-reroll-section">
+                <button class="dice-reroll-btn" id="dice-reroll-btn" onclick="rerollDice()">
+                    ✧ 命運介入 (3點)
+                </button>
+                <button class="dice-continue-btn" id="dice-continue-btn" onclick="continueDiceResult()">
+                    接受命運
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 關係網視窗 -->
     <div id="relation-modal" class="modal-overlay">
@@ -512,6 +983,11 @@
             <div style="text-align:center;">
                 <button class="start-adventure-btn" style="padding:12px 40px;font-size:16px;" onclick="saveApiKey()">儲存</button>
             </div>
+            <div style="text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid #3a3d4a;">
+                <button class="fate-action-btn" style="background:linear-gradient(135deg,#5a3030,#4a2020);" onclick="clearAutoSave();toggleSettingsModal(false);">
+                    🗑️ 清除存檔
+                </button>
+            </div>
         </div>
     </div>
 
@@ -522,16 +998,126 @@
         </div>
     </div>
 
+    <!-- 命運長河視窗 -->
+    <div id="timeline-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:600px;">
+            <span class="close-btn" onclick="toggleTimelineModal(false)">×</span>
+            <div class="modal-title">命 運 長 河</div>
+            <div id="timeline-content" class="timeline-container"></div>
+        </div>
+    </div>
+
+    <!-- 角色創建視窗 -->
+    <div id="character-create-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-title">角 色 創 建</div>
+            <div class="character-create-form">
+                <!-- 姓名 -->
+                <div class="form-group">
+                    <label>角色姓名</label>
+                    <input type="text" id="char-name" placeholder="無名旅人" maxlength="10">
+                </div>
+
+                <!-- 性別 -->
+                <div class="form-group">
+                    <label>性別</label>
+                    <div class="radio-group" id="char-gender">
+                        <label class="radio-item"><input type="radio" name="gender" value="男" checked><span>男</span></label>
+                        <label class="radio-item"><input type="radio" name="gender" value="女"><span>女</span></label>
+                        <label class="radio-item"><input type="radio" name="gender" value="其他"><span>其他</span></label>
+                        <label class="radio-item"><input type="radio" name="gender" value="不指定"><span>不指定</span></label>
+                    </div>
+                </div>
+
+                <!-- 初始屬性 -->
+                <div class="form-group">
+                    <label>初始屬性 <span id="stat-points-remaining" style="color:#deb887;">(剩餘點數: 10)</span></label>
+                    <div class="stat-allocator">
+                        <div class="stat-row">
+                            <span class="stat-name">💪 力量</span>
+                            <span class="stat-desc">影響戰鬥、體力相關判定</span>
+                            <div class="stat-controls">
+                                <button class="stat-btn" onclick="adjustStat('strength', -1)">-</button>
+                                <span id="stat-strength" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('strength', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-name">📚 智慧</span>
+                            <span class="stat-desc">影響解謎、知識相關判定</span>
+                            <div class="stat-controls">
+                                <button class="stat-btn" onclick="adjustStat('wisdom', -1)">-</button>
+                                <span id="stat-wisdom" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('wisdom', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-name">💬 魅力</span>
+                            <span class="stat-desc">影響社交、說服相關判定</span>
+                            <div class="stat-controls">
+                                <button class="stat-btn" onclick="adjustStat('charisma', -1)">-</button>
+                                <span id="stat-charisma" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('charisma', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-name">🍀 運氣</span>
+                            <span class="stat-desc">影響隨機事件結果</span>
+                            <div class="stat-controls">
+                                <button class="stat-btn" onclick="adjustStat('luck', -1)">-</button>
+                                <span id="stat-luck" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('luck', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 身世背景 -->
+                <div class="form-group">
+                    <label>身世背景</label>
+                    <select id="char-background">
+                        <option value="wanderer">流浪者（無初始陣營傾向）</option>
+                        <option value="noble">沒落貴族（第一陣營 +15）</option>
+                        <option value="merchant">商人之子（第二陣營 +15）</option>
+                        <option value="temple">神殿孤兒（第三陣營 +15）</option>
+                        <option value="mystery">神秘來歷（隨機一項屬性 +3）</option>
+                    </select>
+                </div>
+
+                <!-- 性格特質 -->
+                <div class="form-group">
+                    <label>性格特質 (可選1-2個)</label>
+                    <div class="checkbox-group" id="char-traits">
+                        <label class="checkbox-item"><input type="checkbox" name="trait" value="cautious"><span>謹慎</span><small>risk選項較少出現</small></label>
+                        <label class="checkbox-item"><input type="checkbox" name="trait" value="reckless"><span>魯莽</span><small>risk選項較多出現</small></label>
+                        <label class="checkbox-item"><input type="checkbox" name="trait" value="curious"><span>好奇</span><small>focus選項較多出現</small></label>
+                        <label class="checkbox-item"><input type="checkbox" name="trait" value="practical"><span>務實</span><small>normal選項較多出現</small></label>
+                    </div>
+                </div>
+
+                <div style="text-align:center;margin-top:25px;">
+                    <button class="start-adventure-btn" onclick="confirmCharacterCreation()">開始冒險</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script>
         /**
-         * Gemini RPG Engine V8 - 命運織網
+         * Gemini RPG Engine V9 - 命運織網
          * 特色功能：
          * 1. 人物關係網 (可視化 NPC 關係)
          * 2. 命運點系統 (干涉 NPC 關係)
          * 3. 日曆系統 (時間流逝)
          * 4. 世界觀展示
+         * 5. 自動存檔與讀檔
+         * 6. 角色創建系統
+         * 7. NPC 狀態系統
+         * 8. 命運回溯系統
+         * 9. 擲骰重擲系統
+         * 10. 故事摘要壓縮
          */
 
         // ============ 全域設定 ============
@@ -541,12 +1127,12 @@
 
         const CONFIG = {
             colors: {
-                bg: '#0d0f14',
-                textPrimary: '#d0d0c8',
-                textDim: '#7a7d8a',
-                textGold: '#c9a227',
-                panelBg: 'rgba(20, 22, 30, 0.95)',
-                panelBorder: '#3a3d4a',
+                bg: '#15171e',
+                textPrimary: '#d8d8d0',
+                textDim: '#8f919c',
+                textGold: '#deb887',
+                panelBg: 'rgba(28, 30, 38, 0.94)',
+                panelBorder: '#4a4d5e',
                 factions: ['#c76b6b', '#7eb58c', '#6b9bc7'],
                 relationColors: {
                     love: '#e08090',
@@ -659,6 +1245,582 @@
             return false;
         }
 
+        // ============ 新系統：自動存檔 ============
+        function autoSave() {
+            try {
+                const saveData = {
+                    currentWorld,
+                    factionData,
+                    npcs,
+                    relationships,
+                    historyLog: historyLog.slice(-30), // 只保留最近 30 筆
+                    calendar: {
+                        year: CALENDAR.year,
+                        season: CALENDAR.season,
+                        day: CALENDAR.day,
+                        timeOfDay: CALENDAR.timeOfDay
+                    },
+                    fatePoints,
+                    storyContext,
+                    playerCharacter,
+                    currentState,
+                    currentOptions,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('rpg_autosave', JSON.stringify(saveData));
+                console.log('自動存檔完成', new Date().toLocaleTimeString());
+            } catch (e) {
+                console.warn('自動存檔失敗:', e);
+                if (e.name === 'QuotaExceededError') {
+                    showError('儲存空間不足，請清理舊存檔');
+                }
+            }
+        }
+
+        function loadAutoSave() {
+            try {
+                const saveStr = localStorage.getItem('rpg_autosave');
+                if (!saveStr) return false;
+
+                const saveData = JSON.parse(saveStr);
+
+                // 還原遊戲狀態
+                currentWorld = saveData.currentWorld;
+                factionData = saveData.factionData || [];
+                npcs = saveData.npcs || [];
+                relationships = saveData.relationships || [];
+                historyLog = saveData.historyLog || [];
+                fatePoints = saveData.fatePoints || 0;
+                storyContext = saveData.storyContext || '';
+                playerCharacter = saveData.playerCharacter || {
+                    id: 'player',
+                    name: '旅人',
+                    role: '命運的見證者',
+                    desc: '你，一個踏入這個世界的旅人。',
+                    faction: -1,
+                    x: 0, y: 0,
+                    known: true
+                };
+                currentOptions = saveData.currentOptions || [];
+
+                // 還原日曆
+                if (saveData.calendar) {
+                    CALENDAR.year = saveData.calendar.year;
+                    CALENDAR.season = saveData.calendar.season;
+                    CALENDAR.day = saveData.calendar.day;
+                    CALENDAR.timeOfDay = saveData.calendar.timeOfDay;
+                }
+
+                // 更新 UI
+                document.getElementById('calendar-display').style.display = 'block';
+                document.getElementById('fate-display').style.display = 'flex';
+                document.getElementById('fate-value').textContent = fatePoints;
+                CALENDAR.updateDisplay();
+                updateNPCBadge();
+
+                // 根據 currentState 恢復畫面
+                currentState = saveData.currentState;
+                if (currentState === STATE.TYPING || currentState === STATE.CHOICE) {
+                    currentState = STATE.CHOICE;
+                    generateOptionsUI();
+                    // 顯示最後的劇情文字
+                    typewriter.text = storyContext;
+                    typewriter.idx = storyContext.length;
+                    typewriter.done = true;
+                }
+
+                showFloatingText('讀取存檔成功', canvasWidth/2, canvasHeight/2, '#80c090');
+                return true;
+            } catch (e) {
+                console.error('讀取存檔失敗:', e);
+                return false;
+            }
+        }
+
+        function checkAutoSave() {
+            const saveStr = localStorage.getItem('rpg_autosave');
+            if (!saveStr) return;
+
+            try {
+                const saveData = JSON.parse(saveStr);
+                const timestamp = new Date(saveData.timestamp);
+                const worldName = saveData.currentWorld?.name || '未知世界';
+
+                // 建立確認對話框
+                const overlay = document.createElement('div');
+                overlay.className = 'modal-overlay show';
+                overlay.id = 'autosave-modal';
+                overlay.innerHTML = `
+                    <div class="modal-content" style="max-width:450px;text-align:center;">
+                        <div class="modal-title">發 現 未 完 成 的 冒 險</div>
+                        <div style="color:#a0a5b0;margin-bottom:20px;line-height:1.8;">
+                            <p>世界：<span style="color:#deb887;">${worldName}</span></p>
+                            <p>存檔時間：${timestamp.toLocaleString()}</p>
+                        </div>
+                        <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;">
+                            <button class="start-adventure-btn" onclick="continueAutoSave()">繼續冒險</button>
+                            <button class="start-adventure-btn" style="background:linear-gradient(135deg,#4a4a4a,#3a3a3a);color:#d0d0d0;" onclick="startNewGame()">重新開始</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            } catch (e) {
+                console.error('檢查存檔失敗:', e);
+            }
+        }
+
+        function continueAutoSave() {
+            const modal = document.getElementById('autosave-modal');
+            if (modal) modal.remove();
+            loadAutoSave();
+        }
+
+        function startNewGame() {
+            const modal = document.getElementById('autosave-modal');
+            if (modal) modal.remove();
+            clearAutoSave();
+            if (!apiKey) toggleSettingsModal(true);
+            else startWorldGeneration();
+        }
+
+        function clearAutoSave() {
+            try {
+                localStorage.removeItem('rpg_autosave');
+                showFloatingText('存檔已清除', canvasWidth/2, canvasHeight/2, '#c07070');
+            } catch (e) {
+                console.warn('清除存檔失敗:', e);
+            }
+        }
+
+        // 離開頁面前自動存檔
+        window.addEventListener('beforeunload', () => {
+            if (currentState >= STATE.TYPING && currentWorld) {
+                autoSave();
+            }
+        });
+
+        // ============ 新系統：存檔點與命運回溯 ============
+        let savePoints = [];
+        const MAX_SAVE_POINTS = 50;
+        let lastSavePointDay = -1;
+
+        function createSavePoint(name, isMajor = false) {
+            const snapshot = {
+                currentWorld: JSON.parse(JSON.stringify(currentWorld)),
+                factionData: JSON.parse(JSON.stringify(factionData)),
+                npcs: JSON.parse(JSON.stringify(npcs)),
+                relationships: JSON.parse(JSON.stringify(relationships)),
+                historyLog: JSON.parse(JSON.stringify(historyLog)),
+                calendar: {
+                    year: CALENDAR.year,
+                    season: CALENDAR.season,
+                    day: CALENDAR.day,
+                    timeOfDay: CALENDAR.timeOfDay
+                },
+                fatePoints,
+                storyContext,
+                playerCharacter: JSON.parse(JSON.stringify(playerCharacter)),
+                currentOptions: JSON.parse(JSON.stringify(currentOptions))
+            };
+
+            const savePoint = {
+                id: `sp_${Date.now()}`,
+                name: name || `${CALENDAR.getString()} - ${storyContext.slice(0, 10)}...`,
+                timestamp: Date.now(),
+                calendarString: `${CALENDAR.getString()} ${CALENDAR.getTimeString()}`,
+                snapshot,
+                isMajor
+            };
+
+            savePoints.push(savePoint);
+
+            // 超過上限時刪除最舊的非重大節點
+            while (savePoints.length > MAX_SAVE_POINTS) {
+                const nonMajorIndex = savePoints.findIndex(sp => !sp.isMajor);
+                if (nonMajorIndex >= 0) {
+                    savePoints.splice(nonMajorIndex, 1);
+                } else {
+                    // 全都是重大節點，刪除最舊的
+                    savePoints.shift();
+                }
+            }
+
+            // 儲存到 localStorage
+            saveSavePointsToStorage();
+
+            console.log(`存檔點建立：${savePoint.name} (${isMajor ? '重大' : '普通'})`);
+        }
+
+        function saveSavePointsToStorage() {
+            try {
+                localStorage.setItem('rpg_savepoints', JSON.stringify(savePoints));
+            } catch (e) {
+                console.warn('存檔點儲存失敗:', e);
+                // 如果儲存空間不足，刪除一些舊的存檔點
+                if (e.name === 'QuotaExceededError' && savePoints.length > 10) {
+                    savePoints = savePoints.slice(-10);
+                    try {
+                        localStorage.setItem('rpg_savepoints', JSON.stringify(savePoints));
+                    } catch (e2) {
+                        console.error('存檔點儲存仍然失敗');
+                    }
+                }
+            }
+        }
+
+        function loadSavePointsFromStorage() {
+            try {
+                const data = localStorage.getItem('rpg_savepoints');
+                if (data) {
+                    savePoints = JSON.parse(data);
+                }
+            } catch (e) {
+                console.warn('讀取存檔點失敗:', e);
+                savePoints = [];
+            }
+        }
+
+        function checkAndCreateSavePoint(triggerType, eventName = '') {
+            // triggerType: 'risk', 'fate', 'newNPC', 'monthly'
+            let isMajor = false;
+            let name = '';
+
+            switch (triggerType) {
+                case 'risk':
+                    name = `${CALENDAR.getString()} - 冒險抉擇`;
+                    break;
+                case 'fate':
+                    name = `${CALENDAR.getString()} - ${eventName || '命運事件'}`;
+                    isMajor = true;
+                    break;
+                case 'newNPC':
+                    name = `${CALENDAR.getString()} - 遇見${eventName}`;
+                    break;
+                case 'monthly':
+                    const totalDays = (CALENDAR.year - 1) * 120 + CALENDAR.season * 30 + CALENDAR.day;
+                    if (Math.floor(totalDays / 30) !== Math.floor(lastSavePointDay / 30)) {
+                        name = `${CALENDAR.getString()} - 月末紀錄`;
+                        lastSavePointDay = totalDays;
+                    } else {
+                        return; // 本月已有存檔點
+                    }
+                    break;
+            }
+
+            if (name) {
+                createSavePoint(name, isMajor);
+            }
+        }
+
+        function revertToSavePoint(savePointId) {
+            const savePoint = savePoints.find(sp => sp.id === savePointId);
+            if (!savePoint) {
+                showError('存檔點不存在');
+                return;
+            }
+
+            // 計算消耗
+            const cost = savePoint.isMajor ? 8 : 5;
+            if (fatePoints < cost) {
+                showError(`命運點不足（需要 ${cost} 點）`);
+                return;
+            }
+
+            // 確認對話框
+            if (!confirm(`回溯將抹除此節點之後的所有記憶，消耗 ${cost} 命運點。是否確定？`)) {
+                return;
+            }
+
+            // 扣除命運點
+            spendFatePoints(cost);
+
+            // 還原狀態
+            const snapshot = savePoint.snapshot;
+            currentWorld = snapshot.currentWorld;
+            factionData = snapshot.factionData;
+            npcs = snapshot.npcs;
+            relationships = snapshot.relationships;
+            historyLog = snapshot.historyLog;
+            CALENDAR.year = snapshot.calendar.year;
+            CALENDAR.season = snapshot.calendar.season;
+            CALENDAR.day = snapshot.calendar.day;
+            CALENDAR.timeOfDay = snapshot.calendar.timeOfDay;
+            fatePoints = snapshot.fatePoints;
+            storyContext = snapshot.storyContext;
+            playerCharacter = snapshot.playerCharacter;
+            currentOptions = snapshot.currentOptions;
+
+            // 刪除該節點之後的存檔點
+            const index = savePoints.findIndex(sp => sp.id === savePointId);
+            if (index >= 0) {
+                savePoints = savePoints.slice(0, index + 1);
+            }
+
+            // 刪除該時間點之後的歷史記錄（透過時間戳判斷）
+            historyLog.push({
+                role: 'Fate',
+                text: `【命運回溯】時間倒流至「${savePoint.name}」`
+            });
+
+            // 更新 UI
+            CALENDAR.updateDisplay();
+            document.getElementById('fate-value').textContent = fatePoints;
+            updateNPCBadge();
+            saveSavePointsToStorage();
+
+            // 關閉模態視窗
+            toggleTimelineModal(false);
+
+            // 顯示過場效果
+            showFloatingText('命運之輪逆轉...', canvasWidth/2, canvasHeight/2, '#c0a0e0');
+
+            // 回到選擇狀態
+            currentState = STATE.CHOICE;
+            generateOptionsUI();
+            typewriter.text = storyContext;
+            typewriter.idx = storyContext.length;
+            typewriter.done = true;
+        }
+
+        function toggleTimelineModal(show) {
+            document.getElementById('timeline-modal').classList.toggle('show', show);
+            if (show) {
+                renderTimeline();
+            }
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline-content');
+
+            if (savePoints.length === 0) {
+                container.innerHTML = '<div class="timeline-empty">尚無命運節點</div>';
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < savePoints.length; i++) {
+                const sp = savePoints[i];
+                const cost = sp.isMajor ? 8 : 5;
+                const canRevert = fatePoints >= cost;
+
+                html += `
+                    <div class="timeline-item ${sp.isMajor ? 'major' : ''}" onclick="toggleTimelineDetail('${sp.id}')">
+                        <div class="timeline-date">${sp.calendarString}</div>
+                        <div class="timeline-name">${sp.isMajor ? '★ ' : ''}${sp.name}</div>
+                        <div class="timeline-detail" id="detail-${sp.id}">
+                            <div class="timeline-detail-row">
+                                <span>NPC數量</span>
+                                <span>${sp.snapshot.npcs.length}</span>
+                            </div>
+                            <div class="timeline-detail-row">
+                                <span>命運點</span>
+                                <span>${sp.snapshot.fatePoints}</span>
+                            </div>
+                            <div class="timeline-detail-row">
+                                <span>陣營聲望</span>
+                                <span>${sp.snapshot.factionData.map(f => f.rep).join('/')}</span>
+                            </div>
+                            <button class="timeline-revert-btn" onclick="event.stopPropagation();revertToSavePoint('${sp.id}')" ${canRevert ? '' : 'disabled'}>
+                                ⏳ 回溯至此 <span class="timeline-cost">(消耗 ${cost} 命運點)</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function toggleTimelineDetail(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const allDetails = document.querySelectorAll('.timeline-detail');
+
+            allDetails.forEach(d => {
+                if (d.id !== `detail-${id}`) {
+                    d.classList.remove('show');
+                    d.parentElement.classList.remove('selected');
+                }
+            });
+
+            detail.classList.toggle('show');
+            detail.parentElement.classList.toggle('selected');
+        }
+
+        // ============ 新系統：命運點重擲系統 ============
+        const DICE_REROLL_COST = 3;
+        let currentDiceCheck = null;
+        let diceCheckCallback = null;
+
+        const STAT_NAMES = {
+            strength: '力量',
+            wisdom: '智慧',
+            charisma: '魅力',
+            luck: '運氣'
+        };
+
+        function calculateDiceThreshold(difficulty, statValue) {
+            // 基礎難度 - 屬性加成
+            // 難度：easy(6), normal(8), hard(10), extreme(12)
+            const baseDifficulty = {
+                easy: 6,
+                normal: 8,
+                hard: 10,
+                extreme: 12
+            };
+            const threshold = (baseDifficulty[difficulty] || 8) - Math.floor(statValue / 2);
+            return Math.max(2, Math.min(12, threshold)); // 最低2，最高12
+        }
+
+        function rollD12() {
+            return Math.floor(Math.random() * 12) + 1;
+        }
+
+        async function performDiceCheck(title, stat, difficulty, onComplete) {
+            const statValue = playerCharacter.stats[stat] || 0;
+            const threshold = calculateDiceThreshold(difficulty, statValue);
+
+            currentDiceCheck = {
+                title,
+                stat,
+                difficulty,
+                threshold,
+                statValue,
+                result: null,
+                success: false,
+                rerolled: false
+            };
+
+            diceCheckCallback = onComplete;
+
+            // 顯示 UI
+            document.getElementById('dice-title').textContent = title;
+            document.getElementById('dice-attribute').textContent = `${STAT_NAMES[stat] || stat} 檢定`;
+            document.getElementById('dice-threshold').textContent = `目標：${threshold} 以上`;
+            document.getElementById('dice-stat-bonus').textContent = statValue > 0 ? `(${STAT_NAMES[stat]} ${statValue} → 難度 -${Math.floor(statValue/2)})` : '';
+            document.getElementById('dice-result-text').classList.remove('show', 'success', 'failure');
+            document.getElementById('dice-reroll-section').classList.remove('show');
+            document.getElementById('dice-display').textContent = '?';
+            document.getElementById('dice-display').classList.remove('success', 'failure', 'rolling');
+
+            document.getElementById('dice-overlay').classList.add('show');
+
+            // 開始擲骰動畫
+            await animateDiceRoll();
+        }
+
+        async function animateDiceRoll() {
+            const display = document.getElementById('dice-display');
+            display.classList.add('rolling');
+
+            // 滾動動畫
+            for (let i = 0; i < 15; i++) {
+                display.textContent = rollD12();
+                await sleep(80 + i * 10);
+            }
+
+            display.classList.remove('rolling');
+
+            // 最終結果
+            const finalResult = rollD12();
+            display.textContent = finalResult;
+
+            currentDiceCheck.result = finalResult;
+            currentDiceCheck.success = finalResult >= currentDiceCheck.threshold;
+
+            // 顯示結果
+            await sleep(300);
+
+            const resultText = document.getElementById('dice-result-text');
+            if (currentDiceCheck.success) {
+                display.classList.add('success');
+                resultText.textContent = '成功！';
+                resultText.classList.add('success');
+            } else {
+                display.classList.add('failure');
+                resultText.textContent = '失敗...';
+                resultText.classList.add('failure');
+            }
+            resultText.classList.add('show');
+
+            // 顯示重擲選項
+            await sleep(500);
+            const rerollSection = document.getElementById('dice-reroll-section');
+            const rerollBtn = document.getElementById('dice-reroll-btn');
+
+            // 只有失敗且有足夠命運點才能重擲
+            const canReroll = !currentDiceCheck.success && fatePoints >= DICE_REROLL_COST && !currentDiceCheck.rerolled;
+            rerollBtn.disabled = !canReroll;
+            rerollBtn.textContent = canReroll ? `✧ 命運介入 (${DICE_REROLL_COST}點)` : (currentDiceCheck.rerolled ? '已使用命運介入' : `命運點不足 (需${DICE_REROLL_COST}點)`);
+
+            rerollSection.classList.add('show');
+        }
+
+        async function rerollDice() {
+            if (!currentDiceCheck || currentDiceCheck.rerolled || fatePoints < DICE_REROLL_COST) return;
+
+            // 扣除命運點
+            spendFatePoints(DICE_REROLL_COST);
+            currentDiceCheck.rerolled = true;
+
+            // 重置 UI
+            const display = document.getElementById('dice-display');
+            const resultText = document.getElementById('dice-result-text');
+            display.classList.remove('success', 'failure');
+            resultText.classList.remove('show', 'success', 'failure');
+            document.getElementById('dice-reroll-section').classList.remove('show');
+
+            showFloatingText('命運之輪轉動...', canvasWidth/2, canvasHeight/2, '#c0a0e0');
+
+            // 運氣屬性影響重擲：運氣每點增加 5% 成功率（通過降低難度）
+            const luckBonus = playerCharacter.stats.luck || 0;
+            const adjustedThreshold = Math.max(2, currentDiceCheck.threshold - Math.floor(luckBonus / 3));
+            currentDiceCheck.threshold = adjustedThreshold;
+
+            document.getElementById('dice-threshold').textContent = `目標：${adjustedThreshold} 以上`;
+            if (luckBonus > 0) {
+                document.getElementById('dice-stat-bonus').textContent += ` (運氣介入 → 難度 -${Math.floor(luckBonus/3)})`;
+            }
+
+            // 重新擲骰
+            await sleep(500);
+            await animateDiceRoll();
+        }
+
+        function continueDiceResult() {
+            const overlay = document.getElementById('dice-overlay');
+            overlay.classList.remove('show');
+
+            if (diceCheckCallback) {
+                diceCheckCallback(currentDiceCheck);
+                diceCheckCallback = null;
+            }
+
+            currentDiceCheck = null;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ============ 新系統：NPC 狀態 ============
+        const NPC_STATUS = {
+            ACTIVE: 'active',        // 正常活躍
+            INJURED: 'injured',      // 受傷
+            MISSING: 'missing',      // 失蹤
+            IMPRISONED: 'imprisoned', // 被囚禁
+            BETRAYED: 'betrayed',    // 已背叛
+            DEAD: 'dead'             // 死亡
+        };
+
+        const NPC_STATUS_INFO = {
+            active: { name: '活躍', color: '#80c090', desc: '正常活動中' },
+            injured: { name: '受傷', color: '#c07070', desc: '因傷需要休養' },
+            missing: { name: '失蹤', color: '#a0a0a0', desc: '下落不明' },
+            imprisoned: { name: '被囚', color: '#7070a0', desc: '被關押中' },
+            betrayed: { name: '背叛', color: '#a060c0', desc: '已經背叛了你' },
+            dead: { name: '死亡', color: '#505050', desc: '已經離開人世' }
+        };
+
         // ============ 新系統：NPC 與關係網 ============
         let playerCharacter = {
             id: 'player',
@@ -667,8 +1829,132 @@
             desc: '你，一個踏入這個世界的旅人。',
             faction: -1,
             x: 0, y: 0, // 關係網中的位置
-            known: true
+            known: true,
+            // 角色創建擴展屬性
+            gender: '不指定',
+            stats: {
+                strength: 0,
+                wisdom: 0,
+                charisma: 0,
+                luck: 0
+            },
+            background: 'wanderer',
+            traits: []
         };
+
+        // ============ 角色創建系統 ============
+        let tempStats = { strength: 0, wisdom: 0, charisma: 0, luck: 0 };
+        let statPointsRemaining = 10;
+
+        const BACKGROUND_INFO = {
+            wanderer: { name: '流浪者', desc: '無初始陣營傾向', factionBonus: -1 },
+            noble: { name: '沒落貴族', desc: '第一陣營 +15', factionBonus: 0 },
+            merchant: { name: '商人之子', desc: '第二陣營 +15', factionBonus: 1 },
+            temple: { name: '神殿孤兒', desc: '第三陣營 +15', factionBonus: 2 },
+            mystery: { name: '神秘來歷', desc: '隨機屬性 +3', factionBonus: -1 }
+        };
+
+        const TRAIT_INFO = {
+            cautious: { name: '謹慎', effect: 'risk選項較少' },
+            reckless: { name: '魯莽', effect: 'risk選項較多' },
+            curious: { name: '好奇', effect: 'focus選項較多' },
+            practical: { name: '務實', effect: 'normal選項較多' }
+        };
+
+        function adjustStat(stat, delta) {
+            const newValue = tempStats[stat] + delta;
+
+            if (newValue < 0) return;
+            if (delta > 0 && statPointsRemaining <= 0) return;
+            if (newValue > 10) return;
+
+            tempStats[stat] = newValue;
+            statPointsRemaining -= delta;
+
+            document.getElementById(`stat-${stat}`).textContent = newValue;
+            document.getElementById('stat-points-remaining').textContent = `(剩餘點數: ${statPointsRemaining})`;
+        }
+
+        function resetCharacterForm() {
+            tempStats = { strength: 0, wisdom: 0, charisma: 0, luck: 0 };
+            statPointsRemaining = 10;
+
+            document.getElementById('char-name').value = '';
+            document.querySelectorAll('input[name="gender"]')[0].checked = true;
+            document.getElementById('char-background').value = 'wanderer';
+            document.querySelectorAll('input[name="trait"]').forEach(cb => cb.checked = false);
+
+            ['strength', 'wisdom', 'charisma', 'luck'].forEach(stat => {
+                document.getElementById(`stat-${stat}`).textContent = '0';
+            });
+            document.getElementById('stat-points-remaining').textContent = '(剩餘點數: 10)';
+        }
+
+        function toggleCharacterCreateModal(show) {
+            document.getElementById('character-create-modal').classList.toggle('show', show);
+            if (show) resetCharacterForm();
+        }
+
+        function confirmCharacterCreation() {
+            // 獲取姓名
+            const name = document.getElementById('char-name').value.trim() || '無名旅人';
+
+            // 獲取性別
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+
+            // 獲取身世背景
+            const background = document.getElementById('char-background').value;
+
+            // 獲取性格特質（最多2個）
+            const traitCheckboxes = document.querySelectorAll('input[name="trait"]:checked');
+            const traits = Array.from(traitCheckboxes).slice(0, 2).map(cb => cb.value);
+
+            // 處理神秘來歷的隨機屬性加成
+            let finalStats = { ...tempStats };
+            if (background === 'mystery') {
+                const statKeys = ['strength', 'wisdom', 'charisma', 'luck'];
+                const randomStat = statKeys[Math.floor(Math.random() * statKeys.length)];
+                finalStats[randomStat] += 3;
+                showFloatingText(`神秘力量覺醒：${randomStat === 'strength' ? '力量' : randomStat === 'wisdom' ? '智慧' : randomStat === 'charisma' ? '魅力' : '運氣'} +3`, canvasWidth/2, canvasHeight/2, '#c0a0e0');
+            }
+
+            // 更新 playerCharacter
+            playerCharacter.name = name;
+            playerCharacter.gender = gender;
+            playerCharacter.stats = finalStats;
+            playerCharacter.background = background;
+            playerCharacter.traits = traits;
+            playerCharacter.desc = `${name}，${gender}，${BACKGROUND_INFO[background].name}出身。`;
+
+            // 關閉模態視窗
+            toggleCharacterCreateModal(false);
+
+            // 開始冒險
+            startAdventureWithCharacter();
+        }
+
+        function getCharacterPromptString() {
+            const bg = BACKGROUND_INFO[playerCharacter.background];
+            const traitsStr = playerCharacter.traits.map(t => TRAIT_INFO[t]?.name).filter(Boolean).join('、') || '無';
+
+            return `主角：${playerCharacter.name}，${playerCharacter.gender}，${bg.name}。性格：${traitsStr}。屬性：力量${playerCharacter.stats.strength}/智慧${playerCharacter.stats.wisdom}/魅力${playerCharacter.stats.charisma}/運氣${playerCharacter.stats.luck}`;
+        }
+
+        function getTraitOptionModifiers() {
+            // 根據性格特質返回選項類型的權重調整
+            const modifiers = { risk: 1, focus: 1, normal: 1 };
+
+            for (const trait of playerCharacter.traits) {
+                switch (trait) {
+                    case 'cautious': modifiers.risk *= 0.5; break;
+                    case 'reckless': modifiers.risk *= 1.5; break;
+                    case 'curious': modifiers.focus *= 1.5; break;
+                    case 'practical': modifiers.normal *= 1.5; break;
+                }
+            }
+
+            return modifiers;
+        }
 
         let npcs = []; // NPC 列表
         let relationships = []; // 關係列表 { from, to, type, strength, revealed }
@@ -684,11 +1970,26 @@
         function addNPC(npc) {
             if (!npcs.find(n => n.id === npc.id)) {
                 npc.known = true;
+                npc.status = npc.status || NPC_STATUS.ACTIVE;
                 npc.x = Math.random() * 300 - 150;
                 npc.y = Math.random() * 300 - 150;
                 npcs.push(npc);
                 updateNPCBadge();
                 showFloatingText(`遇見了 ${npc.name}`, canvasWidth/2, 100, '#d4c4a0');
+            }
+        }
+
+        function updateNPCStatus(npcId, newStatus, reason) {
+            const npc = npcs.find(n => n.id === npcId);
+            if (npc && npc.status !== newStatus) {
+                const oldStatus = npc.status;
+                npc.status = newStatus;
+                const statusInfo = NPC_STATUS_INFO[newStatus];
+                showFloatingText(`${npc.name} ${statusInfo.name}`, canvasWidth/2, canvasHeight/2, statusInfo.color);
+                historyLog.push({
+                    role: 'Status',
+                    text: `【狀態變更】${npc.name}：${NPC_STATUS_INFO[oldStatus]?.name || '未知'} → ${statusInfo.name}${reason ? `（${reason}）` : ''}`
+                });
             }
         }
 
@@ -845,10 +2146,22 @@
             }
 
             const isPlayer = node.id === 'player';
+            const status = node.status || NPC_STATUS.ACTIVE;
+            const statusInfo = NPC_STATUS_INFO[status];
+
+            let statusHtml = '';
+            if (!isPlayer && status !== NPC_STATUS.ACTIVE) {
+                statusHtml = `<div style="margin-top:10px;padding:8px 12px;background:rgba(0,0,0,0.3);border-radius:6px;border-left:3px solid ${statusInfo.color};">
+                    <span style="color:${statusInfo.color};font-weight:700;">【${statusInfo.name}】</span>
+                    <span style="color:#8a8d9a;">${statusInfo.desc}</span>
+                </div>`;
+            }
+
             let html = `
                 <h3>${node.name}</h3>
                 <div class="role">${node.role}</div>
                 <div class="desc">${node.desc}</div>
+                ${statusHtml}
             `;
 
             // 顯示關係
@@ -1064,6 +2377,19 @@
 
         function drawNode(x, y, node, selected, isPlayer = false) {
             const r = isPlayer ? 35 : 28;
+            const status = node.status || NPC_STATUS.ACTIVE;
+
+            // 根據狀態調整透明度
+            const isDead = status === NPC_STATUS.DEAD;
+            const isMissing = status === NPC_STATUS.MISSING;
+            const isInjured = status === NPC_STATUS.INJURED;
+            const isImprisoned = status === NPC_STATUS.IMPRISONED;
+            const isBetrayed = status === NPC_STATUS.BETRAYED;
+
+            relationCtx.save();
+            if (isDead || isMissing) {
+                relationCtx.globalAlpha = isMissing ? 0.5 : 0.4;
+            }
 
             // 光暈
             if (selected) {
@@ -1081,6 +2407,9 @@
             if (isPlayer) {
                 grad.addColorStop(0, '#4a4030');
                 grad.addColorStop(1, '#2a2520');
+            } else if (isDead) {
+                grad.addColorStop(0, '#4a4a4a');
+                grad.addColorStop(1, '#2a2a2a');
             } else {
                 const factionColor = node.faction >= 0 ? CONFIG.colors.factions[node.faction % 3] : '#3a3d4a';
                 grad.addColorStop(0, factionColor);
@@ -1092,26 +2421,140 @@
             relationCtx.arc(x, y, r, 0, Math.PI * 2);
             relationCtx.fill();
 
-            // 邊框
-            relationCtx.strokeStyle = selected ? '#c9a227' : (isPlayer ? '#c9a227' : '#5a5d6a');
+            // 邊框 - 根據狀態改變顏色
+            let borderColor = selected ? '#c9a227' : (isPlayer ? '#c9a227' : '#5a5d6a');
+            if (!isPlayer) {
+                if (isInjured) borderColor = '#c07070';
+                else if (isBetrayed) borderColor = '#a060c0';
+                else if (isImprisoned) borderColor = '#7070a0';
+            }
+            relationCtx.strokeStyle = borderColor;
             relationCtx.lineWidth = selected ? 3 : 2;
             relationCtx.stroke();
 
+            // 被囚禁狀態：繪製條紋效果
+            if (isImprisoned && !isPlayer) {
+                relationCtx.strokeStyle = 'rgba(100, 100, 150, 0.5)';
+                relationCtx.lineWidth = 2;
+                for (let i = -r; i <= r; i += 8) {
+                    relationCtx.beginPath();
+                    const dx = Math.sqrt(r * r - i * i);
+                    relationCtx.moveTo(x + i, y - dx);
+                    relationCtx.lineTo(x + i, y + dx);
+                    relationCtx.stroke();
+                }
+            }
+
+            relationCtx.restore();
+
             // 名字
-            relationCtx.fillStyle = '#d0d0c8';
+            relationCtx.fillStyle = isDead ? '#707070' : '#d0d0c8';
             relationCtx.font = `${isPlayer ? '14' : '12'}px "Noto Serif TC"`;
             relationCtx.textAlign = 'center';
             relationCtx.textBaseline = 'middle';
-            relationCtx.fillText(node.name, x, y + r + 18);
+
+            let displayName = node.name;
+            if (isDead) {
+                // 刪除線效果
+                displayName = node.name;
+                relationCtx.fillText(displayName, x, y + r + 18);
+                const textWidth = relationCtx.measureText(displayName).width;
+                relationCtx.strokeStyle = '#707070';
+                relationCtx.lineWidth = 1;
+                relationCtx.beginPath();
+                relationCtx.moveTo(x - textWidth/2, y + r + 18);
+                relationCtx.lineTo(x + textWidth/2, y + r + 18);
+                relationCtx.stroke();
+            } else {
+                relationCtx.fillText(displayName, x, y + r + 18);
+            }
+
+            // 失蹤狀態：顯示問號
+            if (isMissing && !isPlayer) {
+                relationCtx.fillStyle = '#a0a0a0';
+                relationCtx.font = '20px "Noto Serif TC"';
+                relationCtx.fillText('?', x, y);
+            }
+
+            // 狀態圖示
+            if (!isPlayer && status !== NPC_STATUS.ACTIVE) {
+                const statusInfo = NPC_STATUS_INFO[status];
+                if (statusInfo) {
+                    relationCtx.fillStyle = statusInfo.color;
+                    relationCtx.font = '10px "Noto Serif TC"';
+                    relationCtx.fillText(statusInfo.name, x, y + r + 32);
+                }
+            }
         }
 
         // ============ API 服務 ============
+
+        // JSON 容錯解析函數
+        function tryParseJSON(text) {
+            if (!text || typeof text !== 'string') return null;
+
+            // 策略 1：直接解析
+            try {
+                return JSON.parse(text);
+            } catch (e) {}
+
+            // 策略 2：移除 markdown 的 ```json 和 ``` 包裹
+            try {
+                let cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+                return JSON.parse(cleaned);
+            } catch (e) {}
+
+            // 策略 3：移除尾隨逗號
+            try {
+                let cleaned = text.replace(/,\s*([}\]])/g, '$1');
+                return JSON.parse(cleaned);
+            } catch (e) {}
+
+            // 策略 4：將單引號替換為雙引號
+            try {
+                let cleaned = text.replace(/'/g, '"');
+                return JSON.parse(cleaned);
+            } catch (e) {}
+
+            // 策略 5：處理未轉義的換行符
+            try {
+                let cleaned = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+                return JSON.parse(cleaned);
+            } catch (e) {}
+
+            // 策略 6：用正則表達式提取第一個完整的 JSON 物件
+            try {
+                const objMatch = text.match(/\{[\s\S]*\}/);
+                if (objMatch) {
+                    let jsonStr = objMatch[0];
+                    // 再次嘗試清理
+                    jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+                    return JSON.parse(jsonStr);
+                }
+            } catch (e) {}
+
+            // 策略 7：提取 JSON 陣列
+            try {
+                const arrMatch = text.match(/\[[\s\S]*\]/);
+                if (arrMatch) {
+                    let jsonStr = arrMatch[0];
+                    jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+                    return JSON.parse(jsonStr);
+                }
+            } catch (e) {}
+
+            // 所有策略都失敗
+            return null;
+        }
+
         class GeminiService {
             constructor() {
                 this.baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/";
             }
 
-            async call(prompt, systemInstruction) {
+            async call(prompt, systemInstruction, retryCount = 0) {
+                const MAX_RETRIES = 2;
+
                 if (!apiKey) {
                     showError("請先設定 API Key");
                     return null;
@@ -1144,7 +2587,23 @@
                         showError("AI 回應異常");
                         return null;
                     }
-                    return JSON.parse(text);
+
+                    // 使用容錯解析
+                    const parsed = tryParseJSON(text);
+                    if (parsed) {
+                        return parsed;
+                    }
+
+                    // 解析失敗，嘗試重試
+                    if (retryCount < MAX_RETRIES) {
+                        console.warn(`JSON 解析失敗，正在重試... (${retryCount + 1}/${MAX_RETRIES})`);
+                        showFloatingText("AI 回應格式異常，正在重試...", canvasWidth/2, canvasHeight/2, '#c07070');
+                        return await this.call(prompt, systemInstruction, retryCount + 1);
+                    }
+
+                    showError("AI 回應格式異常，請重試");
+                    console.error("JSON 解析失敗，原始文字:", text);
+                    return null;
                 } catch (e) {
                     console.error(e);
                     showError("連線失敗");
@@ -1177,19 +2636,27 @@
             }
 
             async generateOpeningScene(world) {
+                const charInfo = getCharacterPromptString();
+                const traitMods = getTraitOptionModifiers();
+                const traitHint = playerCharacter.traits.length > 0 ?
+                    `根據角色性格，選項比例建議：risk權重${traitMods.risk.toFixed(1)}、focus權重${traitMods.focus.toFixed(1)}、normal權重${traitMods.normal.toFixed(1)}` : '';
+
                 const sys = `你是TRPG遊戲主持人。世界：${world.name} - ${world.desc}
 陣營：${world.factions.map(f => f.name).join('、')}
 
+${charInfo}
+
 生成遊戲開場：
-1. 描述玩家醒來/抵達的場景
+1. 描述主角（${playerCharacter.name}）醒來/抵達的場景，需符合其身世背景
 2. 介紹第一個遇到的NPC（將成為重要角色）
 3. 給予3個行動選項
+${traitHint}
 
 NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角色的潛在關係
 
 回傳 JSON：
 {
-  "story": "開場劇情描述(100-150字)",
+  "story": "開場劇情描述(100-150字)，需提及主角姓名",
   "newNPC": {
     "id": "npc_001",
     "name": "NPC名字",
@@ -1215,14 +2682,39 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
             }
 
             async generateNextScene(world, context, action, factions, npcs, calendar) {
-                const npcList = npcs.map(n => `${n.name}(${n.role})`).join('、');
+                const npcList = npcs.map(n => {
+                    const statusInfo = NPC_STATUS_INFO[n.status || 'active'];
+                    return `${n.name}(${n.role},狀態:${statusInfo.name})`;
+                }).join('、');
+
+                const activeNPCs = npcs.filter(n => n.status === NPC_STATUS.ACTIVE || !n.status);
+                const deadNPCs = npcs.filter(n => n.status === NPC_STATUS.DEAD);
+                const missingNPCs = npcs.filter(n => n.status === NPC_STATUS.MISSING);
+
+                const charInfo = getCharacterPromptString();
+                const traitMods = getTraitOptionModifiers();
+                const traitHint = playerCharacter.traits.length > 0 ?
+                    `根據角色性格，選項比例建議：risk權重${traitMods.risk.toFixed(1)}、focus權重${traitMods.focus.toFixed(1)}、normal權重${traitMods.normal.toFixed(1)}` : '';
+
                 const sys = `你是TRPG遊戲主持人。
 世界：${world.name}
 目前時間：${calendar.getString()} ${calendar.getTimeString()}
+${charInfo}
 已知NPC：${npcList || '無'}
 陣營聲望：${JSON.stringify(factions)}
 
-根據玩家行動推進劇情。
+NPC狀態說明：
+- active: 正常活躍，可以出現在劇情中
+- injured: 受傷，行動受限
+- missing: 失蹤，可作為線索提及但不直接出現
+- imprisoned: 被囚禁，需要營救
+- betrayed: 已背叛玩家
+- dead: 死亡，絕對不能出現在劇情中
+
+${deadNPCs.length > 0 ? `【重要】已死亡的NPC：${deadNPCs.map(n => n.name).join('、')}，這些角色絕對不能出現在劇情中！` : ''}
+${missingNPCs.length > 0 ? `【提示】失蹤中的NPC：${missingNPCs.map(n => n.name).join('、')}，可以作為調查線索提及` : ''}
+
+根據玩家（${playerCharacter.name}）行動推進劇情。劇情中應使用主角的名字。
 
 規則：
 1. 可能遇到新NPC（機率30%），新NPC需要完整設定
@@ -1230,6 +2722,8 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
 3. 選項需標註時間消耗（1=一個時段，2=半天，4=一整天）
 4. risk類型選項風險更高但可能獲得更多命運點
 5. focus類型選項可深入了解某角色，可能揭示關係
+6. 如果劇情發展導致NPC狀態改變（受傷、失蹤、死亡等），必須在npcStatusChanges中標註
+${traitHint}
 
 回傳 JSON：
 {
@@ -1238,7 +2732,8 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
   "options": [{ "text": "", "type": "normal/risk/focus", "factionIndex": -1, "timeAdvance": 1 }],
   "fateEvent": null 或 { "name": "事件名", "points": 3, "desc": "事件描述" },
   "newRelations": [],
-  "revealedRelations": []
+  "revealedRelations": [],
+  "npcStatusChanges": [{ "id": "npc_xxx", "newStatus": "injured/missing/dead/etc", "reason": "變更原因" }]
 }`;
                 const prompt = `前情：${context}\n\n玩家行動：${action}`;
                 return await this.call(prompt, sys);
@@ -1249,9 +2744,106 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
                 const logText = log.slice(-20).map(h => `[${h.role}]: ${h.text}`).join("\n");
                 return await this.call(`世界：${world.name}\n紀錄:\n${logText}`, sys);
             }
+
+            async generateNextSceneWithDice(world, context, action, factions, npcs, calendar, diceContext) {
+                const npcList = npcs.map(n => {
+                    const statusInfo = NPC_STATUS_INFO[n.status || 'active'];
+                    return `${n.name}(${n.role},狀態:${statusInfo.name})`;
+                }).join('、');
+
+                const charInfo = getCharacterPromptString();
+
+                const sys = `你是TRPG遊戲主持人。
+世界：${world.name}
+目前時間：${calendar.getString()} ${calendar.getTimeString()}
+${charInfo}
+已知NPC：${npcList || '無'}
+陣營聲望：${JSON.stringify(factions)}
+
+${diceContext}
+
+【重要】請根據上述檢定結果來描述場景：
+- 如果是「檢定成功」，描述玩家行動順利的場景，可能獲得額外收穫
+- 如果是「檢定失敗」，描述玩家遭遇困難的場景，可能有負面後果但不要太嚴重
+
+規則：
+1. 可能遇到新NPC（機率30%），新NPC需要完整設定
+2. 檢定成功時有更高機率觸發正面命運事件
+3. 選項需標註時間消耗（1=一個時段，2=半天，4=一整天）
+4. 如果劇情發展導致NPC狀態改變，必須在npcStatusChanges中標註
+
+回傳 JSON：
+{
+  "story": "劇情描述(100-150字)，需反映檢定結果",
+  "newNPC": null 或 { "id": "npc_xxx", "name": "", "role": "", "desc": "", "faction": 0, "personality": "", "secret": "" },
+  "options": [{ "text": "", "type": "normal/risk/focus", "factionIndex": -1, "timeAdvance": 1 }],
+  "fateEvent": null 或 { "name": "事件名", "points": 3, "desc": "事件描述" },
+  "newRelations": [],
+  "revealedRelations": [],
+  "npcStatusChanges": []
+}`;
+                const prompt = `前情：${context}\n\n玩家行動：${action}`;
+                return await this.call(prompt, sys);
+            }
+
+            async compressHistoryLog(log) {
+                const sys = `你是故事記錄員。請將以下事件記錄濃縮為 100-150 字的摘要，保留關鍵人物、重大事件、重要選擇。只回傳摘要文字，不需要 JSON 格式。
+
+回傳 JSON：
+{
+  "summary": "摘要文字（100-150字）"
+}`;
+                const logText = log.map(h => `[${h.role}]: ${h.text}`).join("\n");
+                return await this.call(`事件記錄:\n${logText}`, sys);
+            }
         }
 
         const aiService = new GeminiService();
+
+        // ============ 故事摘要壓縮 ============
+        let isCompressing = false;
+
+        async function compressHistory() {
+            // 當 historyLog 超過 25 筆時觸發壓縮
+            if (historyLog.length <= 25 || isCompressing) return;
+
+            isCompressing = true;
+            console.log('開始壓縮歷史記錄...');
+
+            try {
+                // 取出前 15 筆記錄進行壓縮
+                const toCompress = historyLog.slice(0, 15);
+                const remaining = historyLog.slice(15);
+
+                const result = await aiService.compressHistoryLog(toCompress);
+
+                if (result && result.summary) {
+                    // 替換為摘要
+                    historyLog = [
+                        { role: 'Summary', text: `【前情摘要】${result.summary}` },
+                        ...remaining
+                    ];
+                    console.log('歷史記錄壓縮完成，新長度:', historyLog.length);
+                }
+            } catch (e) {
+                console.error('壓縮歷史記錄失敗:', e);
+            }
+
+            isCompressing = false;
+        }
+
+        function formatHistoryForPrompt() {
+            // 檢查是否有摘要
+            const hasSummary = historyLog.length > 0 && historyLog[0].role === 'Summary';
+
+            if (hasSummary) {
+                const summary = historyLog[0].text;
+                const recentEvents = historyLog.slice(1, 11).map(h => `[${h.role}]: ${h.text}`).join("\n");
+                return `${summary}\n\n【近期事件】\n${recentEvents}`;
+            } else {
+                return historyLog.slice(-10).map(h => `[${h.role}]: ${h.text}`).join("\n");
+            }
+        }
 
         // ============ UI 元件 ============
         let buttons = [];
@@ -1263,10 +2855,10 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
             reset() {
                 this.x = Math.random() * canvasWidth;
                 this.y = Math.random() * canvasHeight;
-                this.r = Math.random() * 1.5 + 0.5;
-                this.speed = Math.random() * 0.2 + 0.05;
-                this.alpha = Math.random() * 0.3 + 0.1;
-                this.drift = (Math.random() - 0.5) * 0.1;
+                this.r = Math.random() * 2 + 0.5;
+                this.speed = Math.random() * 0.3 + 0.1;
+                this.alpha = Math.random() * 0.4 + 0.1;
+                this.drift = (Math.random() - 0.5) * 0.2;
             }
             update() {
                 this.y -= this.speed;
@@ -1277,7 +2869,7 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
                 }
             }
             draw() {
-                ctx.fillStyle = `rgba(200, 180, 140, ${this.alpha})`;
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
                 ctx.fill();
@@ -1561,6 +3153,7 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
 
         // ============ 事件處理 ============
         document.getElementById('btn-relation').addEventListener('click', () => toggleRelationModal(true));
+        document.getElementById('btn-timeline').addEventListener('click', () => toggleTimelineModal(true));
         document.getElementById('btn-sound').addEventListener('click', () => {
             isSoundOn = !isSoundOn;
             document.getElementById('btn-sound').textContent = isSoundOn ? '🔊' : '🔇';
@@ -1578,9 +3171,11 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 toggleRelationModal(false);
+                toggleTimelineModal(false);
                 toggleLogModal(false);
                 toggleSettingsModal(false);
                 toggleWorldIntroModal(false);
+                toggleCharacterCreateModal(false);
             }
         });
 
@@ -1630,9 +3225,16 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
         function init() {
             resize();
             window.addEventListener('resize', resize);
-            for (let i = 0; i < 30; i++) particles.push(new Particle());
+            for (let i = 0; i < 50; i++) particles.push(new Particle());
             currentState = STATE.INIT;
             createStartButton();
+
+            // 載入存檔點
+            loadSavePointsFromStorage();
+
+            // 檢查是否有自動存檔
+            checkAutoSave();
+
             loop();
         }
 
@@ -1696,7 +3298,7 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
 
         function showWorldIntro(world) {
             currentWorld = world;
-            
+
             let factionsHTML = world.factions.map((f, i) => `
                 <div class="faction-card" style="border-left: 3px solid ${CONFIG.colors.factions[i]};">
                     <h4>${f.name}</h4>
@@ -1707,17 +3309,20 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
             document.getElementById('world-intro-content').innerHTML = `
                 <h2>${world.name}</h2>
                 <div class="desc">${world.desc}</div>
-                ${world.conflict ? `<div style="color:#c9a227;font-size:16px;margin-bottom:20px;">「${world.conflict}」</div>` : ''}
+                ${world.conflict ? `<div style="color:#deb887;font-size:16px;margin-bottom:20px;">「${world.conflict}」</div>` : ''}
                 <div class="factions">${factionsHTML}</div>
-                <button class="start-adventure-btn" onclick="beginAdventure()">踏入命運</button>
+                <button class="start-adventure-btn" onclick="openCharacterCreation()">踏入命運</button>
             `;
 
             toggleWorldIntroModal(true);
         }
 
-        async function beginAdventure() {
+        function openCharacterCreation() {
             toggleWorldIntroModal(false);
+            toggleCharacterCreateModal(true);
+        }
 
+        async function startAdventureWithCharacter() {
             // 重置系統
             CALENDAR.reset();
             fatePoints = 0;
@@ -1729,6 +3334,13 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
 
             // 初始化陣營
             factionData = currentWorld.factions.map(f => ({ name: f.name, rep: 50 }));
+
+            // 應用角色背景的陣營加成
+            const bgInfo = BACKGROUND_INFO[playerCharacter.background];
+            if (bgInfo && bgInfo.factionBonus >= 0 && bgInfo.factionBonus < factionData.length) {
+                factionData[bgInfo.factionBonus].rep += 15;
+                showFloatingText(`${factionData[bgInfo.factionBonus].name} 聲望 +15`, canvasWidth/2, 150, CONFIG.colors.factions[bgInfo.factionBonus]);
+            }
 
             // 顯示 UI
             document.getElementById('calendar-display').style.display = 'block';
@@ -1752,9 +3364,17 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
             }
         }
 
+        // 保留 beginAdventure 作為向後兼容（用於讀取存檔後繼續）
+        async function beginAdventure() {
+            await startAdventureWithCharacter();
+        }
+
         async function triggerSceneGeneration(action, timeAdvance = 1) {
             currentState = STATE.LOADING;
             loadingText = "✧ 命運推演中...";
+
+            // 檢查並壓縮歷史記錄
+            await compressHistory();
 
             // 時間流逝
             CALENDAR.advance(timeAdvance);
@@ -1796,6 +3416,8 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
                 } else {
                     addRelationship(res.newNPC.id, 'player', 'neutral', true);
                 }
+                // 建立存檔點
+                checkAndCreateSavePoint('newNPC', res.newNPC.name);
             }
 
             // 新關係
@@ -1812,16 +3434,33 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
                 }
             }
 
+            // NPC 狀態變更
+            if (res.npcStatusChanges && res.npcStatusChanges.length > 0) {
+                for (const change of res.npcStatusChanges) {
+                    if (change.id && change.newStatus) {
+                        updateNPCStatus(change.id, change.newStatus, change.reason);
+                    }
+                }
+            }
+
             // 命運事件
             if (res.fateEvent) {
                 setTimeout(() => {
                     addFatePoints(res.fateEvent.points);
                     historyLog.push({ role: 'Fate', text: `【${res.fateEvent.name}】${res.fateEvent.desc} (+${res.fateEvent.points}命運點)` });
                 }, 1500);
+                // 建立重大存檔點
+                checkAndCreateSavePoint('fate', res.fateEvent.name);
             }
+
+            // 檢查月末存檔點
+            checkAndCreateSavePoint('monthly');
 
             currentState = STATE.TYPING;
             typewriter.start(res.story);
+
+            // 自動存檔
+            autoSave();
         }
 
         function onTypingComplete() {
@@ -1859,7 +3498,100 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
                 const change = opt.type === 'risk' ? 8 : 4;
                 factionData[opt.factionIndex].rep = Math.min(100, factionData[opt.factionIndex].rep + change);
             }
-            triggerSceneGeneration(opt.text, opt.timeAdvance || 1);
+
+            // 對 risk 類型選項建立存檔點並觸發擲骰
+            if (opt.type === 'risk') {
+                checkAndCreateSavePoint('risk');
+
+                // 選擇最相關的屬性進行檢定
+                const relevantStat = opt.checkStat || determineRelevantStat(opt.text);
+
+                performDiceCheck(
+                    '冒險抉擇',
+                    relevantStat,
+                    'hard',
+                    (result) => {
+                        // 根據檢定結果調整行動文字
+                        const actionText = result.success ?
+                            `${opt.text}（檢定成功，行動順利）` :
+                            `${opt.text}（檢定失敗，遭遇困難）`;
+
+                        historyLog.push({
+                            role: 'Dice',
+                            text: `【${STAT_NAMES[relevantStat]}檢定】擲骰 ${result.result}，目標 ${result.threshold}，${result.success ? '成功' : '失敗'}${result.rerolled ? '（命運介入）' : ''}`
+                        });
+
+                        autoSave();
+                        triggerSceneGenerationWithDiceResult(actionText, opt.timeAdvance || 1, result);
+                    }
+                );
+            } else {
+                // 選擇前先存檔，確保玩家的選擇被記錄
+                autoSave();
+                triggerSceneGeneration(opt.text, opt.timeAdvance || 1);
+            }
+        }
+
+        function determineRelevantStat(optionText) {
+            // 根據選項文字判斷最相關的屬性
+            const strengthKeywords = ['戰鬥', '攻擊', '防禦', '力量', '打', '殺', '搏鬥', '衝', '破壞', '舉'];
+            const wisdomKeywords = ['調查', '研究', '分析', '觀察', '解謎', '閱讀', '思考', '計算', '記憶', '學習'];
+            const charismaKeywords = ['說服', '交涉', '談判', '威嚇', '欺騙', '魅惑', '社交', '交談', '請求', '詢問'];
+            const luckKeywords = ['賭', '碰運氣', '嘗試', '冒險', '隨機', '抽', '猜'];
+
+            const text = optionText.toLowerCase();
+
+            if (strengthKeywords.some(k => text.includes(k))) return 'strength';
+            if (wisdomKeywords.some(k => text.includes(k))) return 'wisdom';
+            if (charismaKeywords.some(k => text.includes(k))) return 'charisma';
+            if (luckKeywords.some(k => text.includes(k))) return 'luck';
+
+            // 默認使用玩家最高的屬性
+            const stats = playerCharacter.stats;
+            let maxStat = 'strength';
+            let maxValue = 0;
+            for (const [stat, value] of Object.entries(stats)) {
+                if (value > maxValue) {
+                    maxValue = value;
+                    maxStat = stat;
+                }
+            }
+            return maxStat;
+        }
+
+        async function triggerSceneGenerationWithDiceResult(action, timeAdvance, diceResult) {
+            currentState = STATE.LOADING;
+            loadingText = "✧ 命運推演中...";
+
+            // 檢查並壓縮歷史記錄
+            await compressHistory();
+
+            // 時間流逝
+            CALENDAR.advance(timeAdvance);
+
+            historyLog.push({ role: 'Player', text: action });
+
+            // 將骰子結果傳給 AI
+            const diceContext = diceResult.success ?
+                `【檢定成功】玩家的${STAT_NAMES[diceResult.stat]}檢定成功（擲出${diceResult.result}，目標${diceResult.threshold}），行動順利進行。` :
+                `【檢定失敗】玩家的${STAT_NAMES[diceResult.stat]}檢定失敗（擲出${diceResult.result}，目標${diceResult.threshold}），行動遇到困難或產生意外後果。`;
+
+            const res = await aiService.generateNextSceneWithDice(
+                currentWorld,
+                storyContext,
+                action,
+                factionData,
+                npcs,
+                CALENDAR,
+                diceContext
+            );
+
+            if (res) {
+                processSceneResult(res, action);
+            } else {
+                loadingText = "連線中斷...";
+                buttons = [new Button("重試", canvasWidth/2 - 60, canvasHeight/2 + 50, 120, 50, () => triggerSceneGenerationWithDiceResult(action, timeAdvance, diceResult))];
+            }
         }
 
         // ============ 主迴圈 ============
@@ -1874,15 +3606,15 @@ NPC需要詳細設定，包括：性格、背景、所屬陣營、與其他角�
             particles.forEach(p => { p.update(); p.draw(); });
 
             // 暈影
-            const grad = ctx.createRadialGradient(canvasWidth/2, canvasHeight/2, canvasHeight*0.15, canvasWidth/2, canvasHeight/2, canvasHeight*0.85);
+            const grad = ctx.createRadialGradient(canvasWidth/2, canvasHeight/2, canvasHeight*0.2, canvasWidth/2, canvasHeight/2, canvasHeight*0.9);
             grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.4)');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
             // 載入中
             if (currentState === STATE.LOADING) {
-                ctx.fillStyle = '#8090a0';
+                ctx.fillStyle = '#66a3e0';
                 ctx.font = fonts.displayLarge;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
