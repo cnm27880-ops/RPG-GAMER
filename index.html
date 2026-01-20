@@ -30,6 +30,10 @@
     </div>
 
     <div class="toolbar">
+        <button id="btn-shop" class="tool-btn" title="靈魂商店">
+            🏪
+            <span class="badge" id="soul-shard-badge" style="display:none;">0</span>
+        </button>
         <button id="btn-relation" class="tool-btn" title="人物關係網">
             🕸️
             <span class="badge" id="npc-count" style="display:none;">0</span>
@@ -152,6 +156,35 @@
         </div>
     </div>
 
+    <!-- 靈魂商店 Modal -->
+    <div id="shop-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:900px;">
+            <span class="close-btn" onclick="toggleShopModal(false)">×</span>
+            <div class="modal-title">✧ 靈 魂 商 店 ✧</div>
+
+            <div class="shop-header">
+                <div class="shop-balance">
+                    <span class="shop-currency-icon">💎</span>
+                    <span id="shop-soul-shards">0</span>
+                    <span class="shop-currency-label">靈魂碎片</span>
+                </div>
+                <div class="shop-stats" id="shop-stats">
+                    <div class="shop-stat-item">遊戲次數：<span id="stat-total-games">0</span></div>
+                    <div class="shop-stat-item">勝利次數：<span id="stat-victories">0</span></div>
+                    <div class="shop-stat-item">最長存活：<span id="stat-longest">0</span>h</div>
+                </div>
+            </div>
+
+            <div class="shop-tabs">
+                <button class="shop-tab active" onclick="switchShopTab('backgrounds')">身世</button>
+                <button class="shop-tab" onclick="switchShopTab('startingItems')">道具</button>
+                <button class="shop-tab" onclick="switchShopTab('abilities')">能力</button>
+            </div>
+
+            <div id="shop-content" class="shop-content"></div>
+        </div>
+    </div>
+
     <div id="world-intro-modal" class="modal-overlay">
         <div class="modal-content" style="max-width:800px;">
             <div id="world-intro-content" class="world-intro"></div>
@@ -268,6 +301,10 @@
 
     <!-- 世界異變系統 -->
     <script src="js/world-mutators.js"></script>
+
+    <!-- 傳承與解鎖系統 -->
+    <script src="js/legacy-system.js"></script>
+    <script src="js/shop-ui.js"></script>
 
     <!-- 遊戲狀態管理 -->
     <script src="js/game-state.js"></script>

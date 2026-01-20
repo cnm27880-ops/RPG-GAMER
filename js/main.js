@@ -46,6 +46,8 @@ function init() {
     createStartButton();
     loadSavePointsFromStorage();
     checkAutoSave();
+    updateSoulShardDisplay();
+    setupShopButton();
     loop();
 }
 
