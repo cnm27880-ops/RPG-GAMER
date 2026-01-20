@@ -33,6 +33,12 @@ class GameState {
         this.currentState = typeof STATE !== 'undefined' ? STATE.INIT : 0;
         this.loadingText = '';
 
+        // 末日鐘系統（Doom Clock）
+        this.doomClock = 0;  // 0-100，表示世界危機程度
+        this.doomThresholds = [25, 50, 75, 100];  // 節點閾值
+        this.lastDoomLevel = 0;  // 上次的末日等級
+        this.triggeredThresholds = new Set();  // 已觸發的閾值
+
         // 日曆狀態
         this.calendar = {
             year: 1,
@@ -82,7 +88,7 @@ class GameState {
     // ===== 日曆系統 =====
 
     /**
-     * 推進時間
+     * 推進時間（同時增加末日值）
      */
     advanceTime(units = 1) {
         const seasonNames = ['春月', '夏月', '秋月', '冬月'];
@@ -102,7 +108,91 @@ class GameState {
                     }
                 }
             }
+
+            // 每次推進時間，增加末日值（基礎值 + 隨機波動）
+            this.advanceDoomClock(0.5 + Math.random() * 0.5);
         }
+    }
+
+    // ===== 末日鐘系統 =====
+
+    /**
+     * 增加末日值
+     */
+    advanceDoomClock(amount) {
+        const oldValue = this.doomClock;
+        this.doomClock = Math.min(100, this.doomClock + amount);
+
+        // 檢查是否跨過閾值
+        const oldLevel = this.getDoomLevel(oldValue);
+        const newLevel = this.getDoomLevel(this.doomClock);
+
+        if (newLevel > oldLevel) {
+            this.lastDoomLevel = newLevel;
+            // 標記該閾值已觸發
+            this.triggeredThresholds.add(this.doomThresholds[newLevel - 1]);
+        }
+
+        return this.doomClock;
+    }
+
+    /**
+     * 取得當前末日等級（0-4）
+     * 0: 0-24%, 1: 25-49%, 2: 50-74%, 3: 75-99%, 4: 100%
+     */
+    getDoomLevel(value = null) {
+        const doomValue = value !== null ? value : this.doomClock;
+
+        if (doomValue >= 100) return 4;
+        if (doomValue >= 75) return 3;
+        if (doomValue >= 50) return 2;
+        if (doomValue >= 25) return 1;
+        return 0;
+    }
+
+    /**
+     * 檢查是否剛跨過閾值（需要觸發大事件）
+     */
+    shouldTriggerDoomEvent() {
+        const currentLevel = this.getDoomLevel();
+        return currentLevel > this.lastDoomLevel;
+    }
+
+    /**
+     * 重置末日等級標記（事件觸發後調用）
+     */
+    resetDoomEventFlag() {
+        this.lastDoomLevel = this.getDoomLevel();
+    }
+
+    /**
+     * 取得末日等級描述
+     */
+    getDoomLevelDescription() {
+        const level = this.getDoomLevel();
+        const descriptions = [
+            '寧靜',      // 0-24%
+            '不安',      // 25-49%
+            '危機',      // 50-74%
+            '崩潰邊緣',  // 75-99%
+            '末日降臨'   // 100%
+        ];
+        return descriptions[level];
+    }
+
+    /**
+     * 取得末日值的顏色（用於 UI 顯示）
+     */
+    getDoomColor() {
+        const level = this.getDoomLevel();
+        const colors = [
+            '#80c090',  // 綠色 - 安全
+            '#c0a060',  // 黃色 - 警告
+            '#c09060',  // 橙色 - 危險
+            '#c07070',  // 紅色 - 極度危險
+            '#a040a0'   // 紫色 - 末日
+        ];
+        return colors[level];
     }
 
     /**
@@ -273,6 +363,10 @@ class GameState {
             fatePoints: this.fatePoints,
             currentState: this.currentState,
             calendar: this.calendar,
+            doomClock: this.doomClock,
+            doomThresholds: this.doomThresholds,
+            lastDoomLevel: this.lastDoomLevel,
+            triggeredThresholds: Array.from(this.triggeredThresholds),
             compressedHistory: this.compressedHistory,
             settings: {
                 provider: this.settings.provider,
@@ -282,7 +376,7 @@ class GameState {
                 soundEnabled: this.settings.soundEnabled
             },
             timestamp: Date.now(),
-            version: '2.0'
+            version: '2.1'
         });
     }
 
@@ -304,6 +398,12 @@ class GameState {
             this.fatePoints = data.fatePoints || 0;
             this.currentState = data.currentState;
             this.compressedHistory = data.compressedHistory || '';
+
+            // 還原末日鐘狀態
+            this.doomClock = data.doomClock || 0;
+            this.doomThresholds = data.doomThresholds || [25, 50, 75, 100];
+            this.lastDoomLevel = data.lastDoomLevel || 0;
+            this.triggeredThresholds = new Set(data.triggeredThresholds || []);
 
             if (data.calendar) {
                 this.calendar = data.calendar;
@@ -394,6 +494,10 @@ class GameState {
             historyLog: JSON.parse(JSON.stringify(this.historyLog)),
             calendar: { ...this.calendar },
             fatePoints: this.fatePoints,
+            doomClock: this.doomClock,
+            doomThresholds: [...this.doomThresholds],
+            lastDoomLevel: this.lastDoomLevel,
+            triggeredThresholds: new Set(this.triggeredThresholds),
             storyContext: this.storyContext,
             playerCharacter: JSON.parse(JSON.stringify(this.playerCharacter)),
             currentOptions: JSON.parse(JSON.stringify(this.currentOptions))
@@ -451,6 +555,10 @@ class GameState {
         this.historyLog = s.historyLog;
         Object.assign(this.calendar, s.calendar);
         this.fatePoints = s.fatePoints;
+        this.doomClock = s.doomClock || 0;
+        this.doomThresholds = s.doomThresholds || [25, 50, 75, 100];
+        this.lastDoomLevel = s.lastDoomLevel || 0;
+        this.triggeredThresholds = s.triggeredThresholds || new Set();
         this.storyContext = s.storyContext;
         this.playerCharacter = s.playerCharacter;
         this.currentOptions = s.currentOptions;

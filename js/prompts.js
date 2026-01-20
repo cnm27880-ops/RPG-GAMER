@@ -31,16 +31,69 @@ const PromptTemplates = {
         user: "生成3個獨特的TRPG世界設定"
     },
 
-    // ===== 開場場景 =====
-    openingScene: {
-        system: (world, charInfo, traitHint) => `你是TRPG遊戲主持人。世界：${world.name} - ${world.desc}
+    // ===== 開場旁白（新流程第一步）=====
+    prologueNarration: {
+        system: (world, charInfo) => `你是 TRPG 遊戲主持人。請為這個世界創作一段開場旁白。
+
+世界：${world.name} - ${world.desc}
+核心衝突：${world.conflict}
 陣營：${world.factions.map(f => f.name).join('、')}
 
 ${charInfo}
 
-生成遊戲開場：
-1. 描述主角醒來或抵達的場景，需符合其身世背景。
-2. 介紹第一個遇到的NPC（將成為重要角色）。
+【要求】：
+1. 用第二人稱「你」開頭，營造代入感。
+2. 描述當前世界的危機氛圍（80-120字）。
+3. 點明玩家角色的處境和面臨的困境。
+4. 結尾引導玩家做出第一個重大決定。
+
+回傳 JSON：
+{
+  "prologue": "旁白文字（80-120字）",
+  "mood": "氛圍關鍵詞（如：緊張、絕望、神秘、混亂等）"
+}`,
+        user: "生成開場旁白"
+    },
+
+    // ===== 大方向選擇（新流程第二步）=====
+    initialDirections: {
+        system: (world, charInfo) => `你是 TRPG 遊戲主持人。玩家剛進入這個世界，請給予3個大方向選擇。
+
+世界：${world.name} - ${world.desc}
+核心衝突：${world.conflict}
+陣營：${world.factions.map(f => f.name).join('、')}
+
+${charInfo}
+
+【要求】：
+1. 給予3個截然不同的大方向（如：調查謠言、尋找庇護所、前往黑市等）。
+2. 每個方向會引導玩家遭遇不同的 NPC 和劇情線。
+3. 選項應該符合角色的身世背景。
+
+回傳 JSON：
+{
+  "directions": [{
+    "text": "選項文字（如：前往城鎮廣場，調查最近的失蹤案）",
+    "desc": "簡短描述這個方向會遇到什麼（20-30字）",
+    "type": "investigate/survive/trade/fight/explore",
+    "factionIndex": 0
+  }]
+}`,
+        user: "生成初始大方向選擇"
+    },
+
+    // ===== 開場場景（新流程第三步，根據玩家選擇的方向生成）=====
+    openingScene: {
+        system: (world, charInfo, traitHint, direction) => `你是TRPG遊戲主持人。世界：${world.name} - ${world.desc}
+陣營：${world.factions.map(f => f.name).join('、')}
+
+${charInfo}
+
+玩家選擇的方向：${direction}
+
+生成開場場景：
+1. 根據玩家選擇的方向，描述主角抵達的場景。
+2. 介紹第一個遇到的NPC（將成為重要角色，且與選擇的方向相關）。
 3. 給予3個行動選項。
 
 【重要】：請拒絕流水帳，開場即衝突。讓玩家立刻面臨一個選擇或謎團。
@@ -84,6 +137,7 @@ ${traitHint}
 ${context.charInfo}
 已知NPC：${context.npcList || '無'}
 陣營聲望：${JSON.stringify(context.factions)}
+【末日值】：${context.doomLevel}%（${context.doomDescription}）${context.doomHint}
 
 【DM 城主風格 - 核心原則】：
 
@@ -147,6 +201,7 @@ ${context.mutatorsPrompt || ''}
 ${context.charInfo}
 已知NPC：${context.npcList || '無'}
 陣營聲望：${JSON.stringify(context.factions)}
+【末日值】：${context.doomLevel}%（${context.doomDescription}）${context.doomHint}
 
 ${diceContext}
 
@@ -319,14 +374,38 @@ class PromptBuilder {
     }
 
     /**
-     * 建構開場場景提示詞
+     * 建構開場旁白提示詞（新流程第一步）
      */
-    buildOpeningScene(world, playerCharacter) {
+    buildPrologueNarration(world, playerCharacter) {
+        const charInfo = this._getCharacterInfo(playerCharacter);
+
+        return {
+            system: PromptTemplates.prologueNarration.system(world, charInfo),
+            user: PromptTemplates.prologueNarration.user
+        };
+    }
+
+    /**
+     * 建構大方向選擇提示詞（新流程第二步）
+     */
+    buildInitialDirections(world, playerCharacter) {
+        const charInfo = this._getCharacterInfo(playerCharacter);
+
+        return {
+            system: PromptTemplates.initialDirections.system(world, charInfo),
+            user: PromptTemplates.initialDirections.user
+        };
+    }
+
+    /**
+     * 建構開場場景提示詞（新流程第三步）
+     */
+    buildOpeningScene(world, playerCharacter, direction = '') {
         const charInfo = this._getCharacterInfo(playerCharacter);
         const traitHint = this._getTraitHint(playerCharacter);
 
         return {
-            system: PromptTemplates.openingScene.system(world, charInfo, traitHint),
+            system: PromptTemplates.openingScene.system(world, charInfo, traitHint, direction),
             user: PromptTemplates.openingScene.user
         };
     }
@@ -334,7 +413,7 @@ class PromptBuilder {
     /**
      * 建構場景推進提示詞
      */
-    buildNextScene(world, storyContext, action, factions, npcs, calendar, playerCharacter) {
+    buildNextScene(world, storyContext, action, factions, npcs, calendar, playerCharacter, gameState = null) {
         const context = {
             worldName: world.name,
             calendarString: calendar.getString(),
@@ -344,7 +423,10 @@ class PromptBuilder {
             factions: factions,
             deadNPCWarning: this._getDeadNPCWarning(npcs),
             traitHint: this._getTraitHint(playerCharacter),
-            mutatorsPrompt: this._getMutatorsPrompt(world)
+            mutatorsPrompt: this._getMutatorsPrompt(world),
+            doomLevel: gameState ? Math.floor(gameState.doomClock) : 0,
+            doomDescription: gameState ? gameState.getDoomLevelDescription() : '寧靜',
+            doomHint: this._getDoomHint(gameState)
         };
 
         return {
@@ -356,14 +438,17 @@ class PromptBuilder {
     /**
      * 建構擲骰場景提示詞
      */
-    buildDiceScene(world, storyContext, action, factions, npcs, calendar, playerCharacter, diceResult) {
+    buildDiceScene(world, storyContext, action, factions, npcs, calendar, playerCharacter, diceResult, gameState = null) {
         const context = {
             worldName: world.name,
             calendarString: calendar.getString(),
             timeString: calendar.getTimeString(),
             charInfo: this._getCharacterInfo(playerCharacter),
             npcList: this._formatNPCList(npcs),
-            factions: factions
+            factions: factions,
+            doomLevel: gameState ? Math.floor(gameState.doomClock) : 0,
+            doomDescription: gameState ? gameState.getDoomLevelDescription() : '寧靜',
+            doomHint: this._getDoomHint(gameState)
         };
 
         const diceContext = diceResult.success ?
@@ -464,6 +549,35 @@ class PromptBuilder {
         }
 
         return '';
+    }
+
+    _getDoomHint(gameState) {
+        if (!gameState) return '';
+
+        const level = gameState.getDoomLevel();
+        const shouldTrigger = gameState.shouldTriggerDoomEvent();
+
+        let hint = '\n';
+
+        // 根據末日等級給予氛圍提示
+        if (level === 0) {
+            hint += '世界尚且和平，但危機已在醞釀。';
+        } else if (level === 1) {
+            hint += '不安的氣息開始蔓延，人們察覺到異常。描述時加入焦慮感。';
+        } else if (level === 2) {
+            hint += '危機明顯化，環境變得更加破敗，NPC 更加焦慮和絕望。';
+        } else if (level === 3) {
+            hint += '世界瀕臨崩潰，描述時強調混亂、恐懼、資源匱乏。NPC 行為極端化。';
+        } else if (level === 4) {
+            hint += '末日已至！世界陷入絕望，描述災難性的景象和絕境。';
+        }
+
+        // 如果跨過閾值，需要觸發大事件
+        if (shouldTrigger) {
+            hint += '\n【重要】玩家的行動觸發了末日閾值！請在這個場景中安排一個「大事件」（如：城鎮淪陷、重要 NPC 死亡、陣營覆滅、世界異變加劇等）。此事件必須對玩家的處境產生重大影響。';
+        }
+
+        return hint;
     }
 }
 
