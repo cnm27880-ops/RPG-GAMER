@@ -184,7 +184,10 @@ class OpenAIProvider extends LLMProvider {
             throw new Error('OpenAI API Key 未設定');
         }
 
-        const url = `${this.baseUrl}/chat/completions`;
+        // 支持不同的 URL 結構(有些中轉 API 可能已經包含完整路徑)
+        const url = this.baseUrl.includes('/chat/completions')
+            ? this.baseUrl
+            : `${this.baseUrl}/chat/completions`;
 
         const payload = {
             model: this.model,
@@ -197,12 +200,16 @@ class OpenAIProvider extends LLMProvider {
             max_tokens: options.maxTokens || 4096
         };
 
+        // 支持自定義 headers(某些中轉 API 可能需要)
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.config.apiKey}`,
+            ...(this.config.headers || {})
+        };
+
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKey}`
-            },
+            headers,
             body: JSON.stringify(payload)
         });
 
@@ -222,7 +229,10 @@ class OpenAIProvider extends LLMProvider {
             throw new Error('OpenAI API Key 未設定');
         }
 
-        const url = `${this.baseUrl}/chat/completions`;
+        // 支持不同的 URL 結構
+        const url = this.baseUrl.includes('/chat/completions')
+            ? this.baseUrl
+            : `${this.baseUrl}/chat/completions`;
 
         const payload = {
             model: this.model,
@@ -235,12 +245,16 @@ class OpenAIProvider extends LLMProvider {
             max_tokens: options.maxTokens || 4096
         };
 
+        // 支持自定義 headers
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.config.apiKey}`,
+            ...(this.config.headers || {})
+        };
+
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKey}`
-            },
+            headers,
             body: JSON.stringify(payload)
         });
 

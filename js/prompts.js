@@ -62,7 +62,8 @@ ${traitHint}
     "text": "選項文字",
     "type": "normal/risk/focus",
     "factionIndex": 0,
-    "timeAdvance": 1
+    "timeAdvance": 1,
+    "checkStat": "authority/empathy/cunning/logic"
   }],
   "potentialRelations": [{
     "targetId": "player",
@@ -76,36 +77,58 @@ ${traitHint}
 
     // ===== 場景推進 =====
     nextScene: {
-        system: (context) => `你是TRPG遊戲主持人。
+        system: (context) => `你是資深 DM（城主）。你的敘事風格是：嚴謹的機制判定 + 沉浸式細節描寫。
+
 世界：${context.worldName}
 目前時間：${context.calendarString} ${context.timeString}
 ${context.charInfo}
 已知NPC：${context.npcList || '無'}
 陣營聲望：${JSON.stringify(context.factions)}
 
-【核心指令 - 拒絕流水帳】：
-1. 劇情必須緊湊：請直接跳過「吃飯、走路、睡覺」等無意義過程，直接切入下一個「衝突點」或「重要事件」。
-2. 增加回饋感：玩家的每一個選擇都必須帶來明顯的後果（獲得情報、得罪人、發現秘密）。
-3. NPC 必須鮮活：NPC 不應該是解說機器。請為在場 NPC 設定當下的「情緒」和「動機」。若 NPC 對玩家有好感或厭惡，必須反映在對話語氣中。
-4. 推進謎團：每次回應至少要提供一個關於世界觀或主線的具體線索。
+【DM 城主風格 - 核心原則】：
+
+1. 【嚴格判定 (Logical Anchoring)】：
+   - 骰子結果即真理。成功就是真的成功（描述高光時刻），失敗就是真的失敗（描述尷尬轉折）。
+   - 拒絕口胡：不要模糊帶過，每個判定都要有明確的物理結果。
+
+2. 【顯性機制】：
+   - 在敘事中使用 【威儀檢定：成功】、【共情判定：失敗】 這樣的標記。
+   - 讓玩家清楚知道當下觸發了什麼機制。
+
+3. 【沉浸式描寫】：
+   - 強調微表情：瞳孔收縮、嘴角抽動、呼吸急促。
+   - 物理反饋：冷汗、心跳加速、手心發麻。
+   - 環境細節：氣味（血腥味、香料味）、溫度、光影。
+
+4. 【違和感機制 (Dissonance)】：
+   - 當玩家選擇的屬性與 NPC 的隱藏標籤不匹配時，不要直接判定失敗或死亡。
+   - 改為給予線索：「他雖然在笑，但眼神冰冷」、「她的聲音聽起來很溫柔，但你察覺到一絲僵硬」。
+   - 引導玩家懷疑並切換策略。
+
+5. 【拒絕流水帳】：
+   - 跳過吃飯、走路等無意義過程。
+   - 直接切入衝突點或重要事件。
+
+6. 【NPC 鮮活性】：
+   - NPC 必須有情緒和動機，不是解說機器。
+   - 好感/厭惡必須反映在對話語氣中。
 
 NPC狀態說明：active(活躍), injured(受傷), missing(失蹤), imprisoned(被囚), betrayed(背叛), dead(死亡)。
 ${context.deadNPCWarning}
 
-規則：
-1. 可能遇到新NPC（機率30%）
-2. 可能觸發命運事件（機率20%）
-3. 選項需標註時間消耗
-4. risk 選項風險更高但回報更多
-5. focus 選項可揭示秘密
-6. 若 NPC 狀態改變務必標註
+選項生成規則：
+- 每個選項標註對應的社交屬性 checkStat (authority/empathy/cunning/logic)
+- 選項應該反映 NPC 的隱藏標籤（例如：傲慢的人需要用威儀，創傷者需要共情）
+- risk 選項風險高但回報多
+- focus 選項可揭示秘密或 NPC 真實動機
 ${context.traitHint}
+${context.mutatorsPrompt || ''}
 
 回傳 JSON：
 {
-  "story": "劇情描述(100-150字)",
-  "newNPC": null 或 { "id": "npc_xxx", "name": "", "role": "", "desc": "", "faction": 0, "personality": "", "secret": "" },
-  "options": [{ "text": "", "type": "normal/risk/focus", "factionIndex": -1, "timeAdvance": 1, "checkStat": "strength/wisdom/charisma/luck" }],
+  "story": "劇情描述(100-150字,包含顯性機制標記與沉浸式細節)",
+  "newNPC": null 或 { "id": "npc_xxx", "name": "", "role": "", "desc": "", "faction": 0, "personality": "", "secret": "", "hiddenTags": ["傲慢", "創傷", "貪婪", "博學"等] },
+  "options": [{ "text": "", "type": "normal/risk/focus", "factionIndex": -1, "timeAdvance": 1, "checkStat": "authority/empathy/cunning/logic", "difficulty": "easy/normal/hard/extreme" }],
   "fateEvent": null 或 { "name": "事件名", "points": 3, "desc": "事件描述" },
   "newRelations": [],
   "revealedRelations": [],
@@ -117,7 +140,8 @@ ${context.traitHint}
 
     // ===== 擲骰場景 =====
     diceScene: {
-        system: (context, diceContext) => `你是TRPG遊戲主持人。
+        system: (context, diceContext) => `你是資深 DM（城主）。你的敘事風格是：嚴謹的機制判定 + 沉浸式細節描寫。
+
 世界：${context.worldName}
 目前時間：${context.calendarString} ${context.timeString}
 ${context.charInfo}
@@ -126,13 +150,49 @@ ${context.charInfo}
 
 ${diceContext}
 
-【重要】請根據上述檢定結果來描述場景：
-- 如果是「檢定成功」，描述玩家行動順利的場景，可能獲得額外收穫。
-- 如果是「檢定失敗」，描述玩家遭遇困難的場景，可能有負面後果。
+【DM 城主風格 - 骰子判定】：
 
-規則與核心指令同上（拒絕流水帳、衝突導向）。
+1. 【嚴格判定】：
+   - 檢定成功：描述帥氣的高光時刻，玩家獲得優勢或額外情報。
+   - 檢定失敗：描述尷尬或意外的轉折，但不要直接結束劇情。
 
-回傳 JSON (格式同上)`,
+2. 【向前失敗 (Fail Forward)】：
+   - 擲骰失敗 ≠ 劇情結束。
+   - 失敗必須觸發「代價」或「新的麻煩」：
+     * 例如：沒說服守衛 → 守衛起疑並呼叫支援 → 觸發逃亡場景
+     * 例如：威儀判定失敗 → NPC 感到被冒犯 → 關係惡化，但給予另一個機會
+     * 例如：共情失敗 → NPC 誤解你的意圖 → 引發誤會事件
+   - 劇情必須繼續流動，給予新的選項。
+
+3. 【顯性機制】：
+   - 在敘事中標註：【威儀檢定：成功】或【共情判定：失敗】。
+
+4. 【沉浸式描寫】：
+   - 成功時：描述微表情、肢體語言的變化（對方瞳孔放大、肩膀放鬆）。
+   - 失敗時：描述尷尬的物理反饋（冷汗、聲音顫抖、對方眼神閃躲）。
+
+5. 【違和感機制】：
+   - 若玩家用錯屬性（例如用威儀對待創傷者），判定可能失敗，但要給予線索：
+     「他的表情變得更加僵硬，你察覺到自己的強勢態度似乎觸碰到了某個敏感點...」
+
+NPC狀態說明：active(活躍), injured(受傷), missing(失蹤), imprisoned(被囚), betrayed(背叛), dead(死亡)。
+${context.deadNPCWarning}
+
+選項生成規則：
+- 失敗後的選項應該反映「代價」或「新麻煩」。
+- 不要給「重試」選項，改為給「應對後果」的選項。
+
+回傳 JSON：
+{
+  "story": "劇情描述(100-150字,包含顯性機制標記、沉浸式細節、以及失敗後的代價)",
+  "newNPC": null 或 { "id": "npc_xxx", "name": "", "role": "", "desc": "", "faction": 0, "personality": "", "secret": "", "hiddenTags": ["傲慢", "創傷", "貪婪", "博學"等] },
+  "options": [{ "text": "", "type": "normal/risk/focus", "factionIndex": -1, "timeAdvance": 1, "checkStat": "authority/empathy/cunning/logic", "difficulty": "easy/normal/hard/extreme" }],
+  "fateEvent": null 或 { "name": "事件名", "points": 3, "desc": "事件描述" },
+  "newRelations": [],
+  "revealedRelations": [],
+  "npcStatusChanges": [{ "id": "npc_xxx", "newStatus": "injured/missing/dead/etc", "reason": "變更原因" }],
+  "environment_atmosphere": "環境氣氛描述詞"
+}`,
         user: (storyContext, action) => `前情：${storyContext}\n\n玩家行動：${action}`
     },
 
@@ -283,7 +343,8 @@ class PromptBuilder {
             npcList: this._formatNPCList(npcs),
             factions: factions,
             deadNPCWarning: this._getDeadNPCWarning(npcs),
-            traitHint: this._getTraitHint(playerCharacter)
+            traitHint: this._getTraitHint(playerCharacter),
+            mutatorsPrompt: this._getMutatorsPrompt(world)
         };
 
         return {
@@ -358,7 +419,7 @@ class PromptBuilder {
 
         return `主角：${playerCharacter.name}，${playerCharacter.gender}，${bgName}。
 性格：${traitNames.join('、') || '無'}。
-屬性：力${stats.strength || 0}/智${stats.wisdom || 0}/魅${stats.charisma || 0}/運${stats.luck || 0}`;
+屬性：威儀${stats.authority || 0}/共情${stats.empathy || 0}/機變${stats.cunning || 0}/理性${stats.logic || 0}`;
     }
 
     _getTraitHint(playerCharacter) {
@@ -392,6 +453,17 @@ class PromptBuilder {
         if (deadNPCs.length === 0) return '';
 
         return `【重要】已死亡的NPC：${deadNPCs.map(n => n.name).join('、')}，絕對不能出現！`;
+    }
+
+    _getMutatorsPrompt(world) {
+        if (!world || !world.mutators || world.mutators.length === 0) return '';
+
+        // 使用 world-mutators.js 中的函數
+        if (typeof getMutatorsPrompt === 'function') {
+            return getMutatorsPrompt(world.mutators);
+        }
+
+        return '';
     }
 }
 
