@@ -33,6 +33,13 @@ class GameState {
         this.currentState = typeof STATE !== 'undefined' ? STATE.INIT : 0;
         this.loadingText = '';
 
+        // 末日鐘系統（Doom Clock - 雙向機制：Hope & Doom）
+        this.doomClock = 15;  // 0-100，表示世界危機程度，初始值15
+        this.doomThresholds = [25, 50, 75, 100];  // 節點閾值（潛伏期、顯化期、爆發期、終局）
+        this.lastDoomLevel = 0;  // 上次的末日等級
+        this.triggeredThresholds = new Set();  // 已觸發的閾值
+        this.doomDecayRate = 0.3;  // 時間流逝的腐敗速率（每小時）
+
         // 日曆狀態
         this.calendar = {
             year: 1,
@@ -82,7 +89,8 @@ class GameState {
     // ===== 日曆系統 =====
 
     /**
-     * 推進時間
+     * 推進時間（時間流逝導致世界腐敗）
+     * @param {number} units - 時段數量（每4個時段 = 1天）
      */
     advanceTime(units = 1) {
         const seasonNames = ['春月', '夏月', '秋月', '冬月'];
@@ -102,7 +110,203 @@ class GameState {
                     }
                 }
             }
+
+            // 【腐敗機制】每次推進時間，末日值自動微幅上升
+            // 時間的流逝代表局勢惡化、秩序瓦解
+            this.applyDoomDecay();
         }
+    }
+
+    // ===== 末日鐘系統（雙向機制：Hope & Doom）=====
+
+    /**
+     * 應用時間腐敗效果
+     * 時間流逝會讓世界逐漸崩壞
+     */
+    applyDoomDecay() {
+        const oldValue = this.doomClock;
+        this.doomClock = Math.min(100, this.doomClock + this.doomDecayRate);
+
+        // 檢查是否跨過閾值
+        this.checkDoomThreshold(oldValue, this.doomClock);
+
+        return this.doomClock;
+    }
+
+    /**
+     * 增加末日值（失敗、災難、選擇錯誤）
+     * @param {number} amount - 增加量
+     * @param {string} reason - 原因描述
+     */
+    increaseDoom(amount, reason = '') {
+        const oldValue = this.doomClock;
+        this.doomClock = Math.min(100, this.doomClock + amount);
+
+        // 檢查是否跨過閾值
+        this.checkDoomThreshold(oldValue, this.doomClock);
+
+        // 記錄到歷史（如果有原因）
+        if (reason) {
+            this.addHistoryEntry('Doom', `【末日 +${amount.toFixed(1)}%】${reason}`);
+        }
+
+        return {
+            oldValue,
+            newValue: this.doomClock,
+            change: amount,
+            type: 'doom'
+        };
+    }
+
+    /**
+     * 降低末日值（希望、英勇、奇蹟）
+     * @param {number} amount - 降低量
+     * @param {string} reason - 原因描述
+     */
+    decreaseDoom(amount, reason = '') {
+        const oldValue = this.doomClock;
+        this.doomClock = Math.max(0, this.doomClock - amount);
+
+        // 記錄到歷史（如果有原因）
+        if (reason) {
+            this.addHistoryEntry('Hope', `【希望 +${amount.toFixed(1)}%】${reason} - 世界重獲生機！`);
+        }
+
+        return {
+            oldValue,
+            newValue: this.doomClock,
+            change: -amount,
+            type: 'hope'
+        };
+    }
+
+    /**
+     * 檢查是否跨過末日閾值
+     */
+    checkDoomThreshold(oldValue, newValue) {
+        const oldLevel = this.getDoomLevel(oldValue);
+        const newLevel = this.getDoomLevel(newValue);
+
+        if (newLevel > oldLevel) {
+            this.lastDoomLevel = newLevel;
+            // 標記該閾值已觸發
+            this.triggeredThresholds.add(this.doomThresholds[newLevel - 1]);
+        }
+    }
+
+    /**
+     * 取得當前末日等級（0-4）
+     * 0: 0-24%, 1: 25-49%, 2: 50-74%, 3: 75-99%, 4: 100%
+     */
+    getDoomLevel(value = null) {
+        const doomValue = value !== null ? value : this.doomClock;
+
+        if (doomValue >= 100) return 4;
+        if (doomValue >= 75) return 3;
+        if (doomValue >= 50) return 2;
+        if (doomValue >= 25) return 1;
+        return 0;
+    }
+
+    /**
+     * 檢查是否剛跨過閾值（需要觸發大事件）
+     */
+    shouldTriggerDoomEvent() {
+        const currentLevel = this.getDoomLevel();
+        return currentLevel > this.lastDoomLevel;
+    }
+
+    /**
+     * 重置末日等級標記（事件觸發後調用）
+     */
+    resetDoomEventFlag() {
+        this.lastDoomLevel = this.getDoomLevel();
+    }
+
+    /**
+     * 取得末日等級描述
+     */
+    getDoomLevelDescription() {
+        const level = this.getDoomLevel();
+        const descriptions = [
+            '潛伏期',      // 0-24% - 不祥預兆
+            '顯化期',      // 25-49% - 可見的破壞
+            '爆發期',      // 50-74% - 混亂與暴力
+            '終局'         // 75-100% - 絕望與瘋狂
+        ];
+        return descriptions[level];
+    }
+
+    /**
+     * 取得當前氛圍詳細描述（用於 AI 提示）
+     */
+    getDoomAtmosphere() {
+        const level = this.getDoomLevel();
+        const value = this.doomClock;
+
+        const atmospheres = [
+            {
+                // 0-25%: 潛伏期
+                name: '潛伏期',
+                mood: '不祥預兆',
+                colorTone: '偏暗、陰影加重',
+                description: '世界看似正常，但細微的異常正在蔓延。人們開始察覺到不對勁，但尚未意識到危機的嚴重性。',
+                environmental: '天空偶爾出現詭異的雲層、動物行為反常、夜晚格外寂靜',
+                npcBehavior: 'NPC 略顯焦慮，但仍維持日常生活，會談論最近的怪事',
+                aiInstruction: '描述時加入細微的違和感和不安氛圍，但不要過於誇張。'
+            },
+            {
+                // 26-50%: 顯化期
+                name: '顯化期',
+                mood: '可見的破壞與焦慮',
+                colorTone: '偏黃、塵埃瀰漫',
+                description: '異變已無法隱藏。建築開始崩塌、資源短缺、小規模衝突頻發。',
+                environmental: '街道有明顯損毀痕跡、煙霧繚繞、屍體或廢墟可見',
+                npcBehavior: 'NPC 明顯緊張、互相猜疑、開始囤積物資或武裝自己',
+                aiInstruction: '描述環境時強調破敗感和緊張氣氛。NPC 對話中透露恐懼和絕望。'
+            },
+            {
+                // 51-75%: 爆發期
+                name: '爆發期',
+                mood: '混亂與暴力',
+                colorTone: '偏紅、血色天空',
+                description: '秩序完全瓦解。暴力、瘋狂、混亂統治一切。死亡成為常態。',
+                environmental: '屍橫遍野、建築燃燒、天空血紅或詭異扭曲、異形生物出沒',
+                npcBehavior: 'NPC 處於極度恐慌或瘋狂狀態，可能攻擊玩家或做出極端行為',
+                aiInstruction: '描述極度混亂和暴力場景。NPC 行為極端化，可能背叛或崩潰。'
+            },
+            {
+                // 76-100%: 終局
+                name: '終局',
+                mood: '絕望與瘋狂',
+                colorTone: '紫黑、扭曲變異',
+                description: '世界已接近毀滅。現實本身開始扭曲，生者與死者的界線模糊。',
+                environmental: '天空撕裂、地面龜裂、重力異常、時空扭曲、異界生物入侵',
+                npcBehavior: 'NPC 要嘛已死、要嘛瘋狂、要嘛變異。極少數倖存者處於絕望邊緣',
+                aiInstruction: '描述超現實的恐怖場景。世界規則崩壞，邏輯不再適用。這是最後的時刻。'
+            }
+        ];
+
+        return {
+            level,
+            value: Math.floor(value),
+            ...atmospheres[level]
+        };
+    }
+
+    /**
+     * 取得末日值的顏色（用於 UI 顯示）
+     */
+    getDoomColor() {
+        const level = this.getDoomLevel();
+        const colors = [
+            '#80c090',  // 綠色 - 安全
+            '#c0a060',  // 黃色 - 警告
+            '#c09060',  // 橙色 - 危險
+            '#c07070',  // 紅色 - 極度危險
+            '#a040a0'   // 紫色 - 末日
+        ];
+        return colors[level];
     }
 
     /**
@@ -273,6 +477,10 @@ class GameState {
             fatePoints: this.fatePoints,
             currentState: this.currentState,
             calendar: this.calendar,
+            doomClock: this.doomClock,
+            doomThresholds: this.doomThresholds,
+            lastDoomLevel: this.lastDoomLevel,
+            triggeredThresholds: Array.from(this.triggeredThresholds),
             compressedHistory: this.compressedHistory,
             settings: {
                 provider: this.settings.provider,
@@ -282,7 +490,7 @@ class GameState {
                 soundEnabled: this.settings.soundEnabled
             },
             timestamp: Date.now(),
-            version: '2.0'
+            version: '2.1'
         });
     }
 
@@ -304,6 +512,12 @@ class GameState {
             this.fatePoints = data.fatePoints || 0;
             this.currentState = data.currentState;
             this.compressedHistory = data.compressedHistory || '';
+
+            // 還原末日鐘狀態
+            this.doomClock = data.doomClock || 0;
+            this.doomThresholds = data.doomThresholds || [25, 50, 75, 100];
+            this.lastDoomLevel = data.lastDoomLevel || 0;
+            this.triggeredThresholds = new Set(data.triggeredThresholds || []);
 
             if (data.calendar) {
                 this.calendar = data.calendar;
@@ -394,6 +608,10 @@ class GameState {
             historyLog: JSON.parse(JSON.stringify(this.historyLog)),
             calendar: { ...this.calendar },
             fatePoints: this.fatePoints,
+            doomClock: this.doomClock,
+            doomThresholds: [...this.doomThresholds],
+            lastDoomLevel: this.lastDoomLevel,
+            triggeredThresholds: new Set(this.triggeredThresholds),
             storyContext: this.storyContext,
             playerCharacter: JSON.parse(JSON.stringify(this.playerCharacter)),
             currentOptions: JSON.parse(JSON.stringify(this.currentOptions))
@@ -451,6 +669,10 @@ class GameState {
         this.historyLog = s.historyLog;
         Object.assign(this.calendar, s.calendar);
         this.fatePoints = s.fatePoints;
+        this.doomClock = s.doomClock || 0;
+        this.doomThresholds = s.doomThresholds || [25, 50, 75, 100];
+        this.lastDoomLevel = s.lastDoomLevel || 0;
+        this.triggeredThresholds = s.triggeredThresholds || new Set();
         this.storyContext = s.storyContext;
         this.playerCharacter = s.playerCharacter;
         this.currentOptions = s.currentOptions;

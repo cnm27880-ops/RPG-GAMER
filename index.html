@@ -25,11 +25,19 @@
         <span class="value" id="fate-value">0</span>
     </div>
 
-    <div id="mutators-display" class="mutators-display" style="display:none;">
-        <div id="mutators-list" class="mutators-list"></div>
+    <!-- 末日鐘進度條 -->
+    <div id="doom-display" class="doom-clock" style="display:none;">
+        <div class="doom-label">末日值</div>
+        <div class="doom-bar-container">
+            <div class="doom-bar" id="doom-bar" style="width:0%;"></div>
+        </div>
+        <div class="doom-level" id="doom-level">寧靜</div>
     </div>
 
     <div class="toolbar">
+        <button id="btn-world-info" class="tool-btn" title="世界詳情" style="display:none;">
+            🌍
+        </button>
         <button id="btn-shop" class="tool-btn" title="靈魂商店">
             🏪
             <span class="badge" id="soul-shard-badge" style="display:none;">0</span>
@@ -199,6 +207,31 @@
         </div>
     </div>
 
+    <!-- 世界詳情與異變 Modal -->
+    <div id="world-info-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:700px;">
+            <span class="close-btn" onclick="toggleWorldInfoModal(false)">×</span>
+            <div class="modal-title">🌍 世界詳情</div>
+
+            <div id="world-info-content" style="padding:20px;">
+                <div class="world-info-section">
+                    <h3 style="color:#deb887;margin-bottom:10px;">世界設定</h3>
+                    <div id="world-basic-info" style="line-height:1.8;color:#b0b5c0;"></div>
+                </div>
+
+                <div class="world-info-section" style="margin-top:25px;">
+                    <h3 style="color:#deb887;margin-bottom:10px;">🎴 世界異變</h3>
+                    <div id="world-mutators-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+                </div>
+
+                <div class="world-info-section" style="margin-top:25px;">
+                    <h3 style="color:#deb887;margin-bottom:10px;">⚔️ 陣營狀況</h3>
+                    <div id="world-factions-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="character-create-modal" class="modal-overlay">
         <div class="modal-content" style="max-width:600px;">
             <div class="modal-title">角 色 創 建</div>
@@ -317,6 +350,7 @@
 
     <!-- UI 元件 -->
     <script src="js/ui.js"></script>
+    <script src="js/ui-helpers.js"></script>
 
     <!-- 主程式邏輯 -->
     <script src="js/main.js"></script>

@@ -38,6 +38,9 @@ let loadingText = "";
 let generatedWorlds = [];
 let isSoundOn = false;
 
+// 遊戲狀態管理實例（會在遊戲開始時初始化）
+let gameState = null;
+
 // 設定檔
 const CONFIG = {
     // 顏色設定
