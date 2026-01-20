@@ -41,8 +41,15 @@
     <div id="dice-overlay" class="dice-overlay">
         <div class="dice-container">
             <div class="dice-title" id="dice-title">命運檢定</div>
-            <div class="dice-attribute" id="dice-attribute">力量檢定</div>
-            <div class="dice-display" id="dice-display">?</div>
+            <div class="dice-attribute" id="dice-attribute">威儀檢定</div>
+            <div class="dice-display" id="dice-display">
+                <div class="dice-face front">1</div>
+                <div class="dice-face back">2</div>
+                <div class="dice-face right">3</div>
+                <div class="dice-face left">4</div>
+                <div class="dice-face top">5</div>
+                <div class="dice-face bottom">6</div>
+            </div>
             <div class="dice-threshold" id="dice-threshold">目標：8 以上</div>
             <div class="dice-result-text" id="dice-result-text">成功！</div>
             <div class="dice-stat-bonus" id="dice-stat-bonus"></div>
@@ -178,39 +185,39 @@
                     <label>初始屬性 <span id="stat-points-remaining" style="color:#deb887;">(剩餘點數: 10)</span></label>
                     <div class="stat-allocator">
                         <div class="stat-row">
-                            <span class="stat-name">💪 力量</span>
-                            <span class="stat-desc">影響戰鬥、體力相關判定</span>
+                            <span class="stat-name">👑 威儀</span>
+                            <span class="stat-desc">對抗傲慢、守序、膽怯</span>
                             <div class="stat-controls">
-                                <button class="stat-btn" onclick="adjustStat('strength', -1)">-</button>
-                                <span id="stat-strength" class="stat-value">0</span>
-                                <button class="stat-btn" onclick="adjustStat('strength', 1)">+</button>
+                                <button class="stat-btn" onclick="adjustStat('authority', -1)">-</button>
+                                <span id="stat-authority" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('authority', 1)">+</button>
                             </div>
                         </div>
                         <div class="stat-row">
-                            <span class="stat-name">📚 智慧</span>
-                            <span class="stat-desc">影響解謎、知識相關判定</span>
+                            <span class="stat-name">💖 共情</span>
+                            <span class="stat-desc">對抗創傷、善良、感性</span>
                             <div class="stat-controls">
-                                <button class="stat-btn" onclick="adjustStat('wisdom', -1)">-</button>
-                                <span id="stat-wisdom" class="stat-value">0</span>
-                                <button class="stat-btn" onclick="adjustStat('wisdom', 1)">+</button>
+                                <button class="stat-btn" onclick="adjustStat('empathy', -1)">-</button>
+                                <span id="stat-empathy" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('empathy', 1)">+</button>
                             </div>
                         </div>
                         <div class="stat-row">
-                            <span class="stat-name">💬 魅力</span>
-                            <span class="stat-desc">影響社交、說服相關判定</span>
+                            <span class="stat-name">🎭 機變</span>
+                            <span class="stat-desc">對抗貪婪、多疑、狡詐</span>
                             <div class="stat-controls">
-                                <button class="stat-btn" onclick="adjustStat('charisma', -1)">-</button>
-                                <span id="stat-charisma" class="stat-value">0</span>
-                                <button class="stat-btn" onclick="adjustStat('charisma', 1)">+</button>
+                                <button class="stat-btn" onclick="adjustStat('cunning', -1)">-</button>
+                                <span id="stat-cunning" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('cunning', 1)">+</button>
                             </div>
                         </div>
                         <div class="stat-row">
-                            <span class="stat-name">🍀 運氣</span>
-                            <span class="stat-desc">影響隨機事件結果</span>
+                            <span class="stat-name">🔬 理性</span>
+                            <span class="stat-desc">對抗博學、冷靜、務實</span>
                             <div class="stat-controls">
-                                <button class="stat-btn" onclick="adjustStat('luck', -1)">-</button>
-                                <span id="stat-luck" class="stat-value">0</span>
-                                <button class="stat-btn" onclick="adjustStat('luck', 1)">+</button>
+                                <button class="stat-btn" onclick="adjustStat('logic', -1)">-</button>
+                                <span id="stat-logic" class="stat-value">0</span>
+                                <button class="stat-btn" onclick="adjustStat('logic', 1)">+</button>
                             </div>
                         </div>
                     </div>

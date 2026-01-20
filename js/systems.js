@@ -299,7 +299,7 @@ function revertToSavePoint(savePointId) {
 const DICE_REROLL_COST = 3;
 let currentDiceCheck = null;
 let diceCheckCallback = null;
-const STAT_NAMES = { strength: '力量', wisdom: '智慧', charisma: '魅力', luck: '運氣' };
+const STAT_NAMES = { authority: '威儀', empathy: '共情', cunning: '機變', logic: '理性' };
 
 function calculateDiceThreshold(difficulty, statValue) {
     const baseDifficulty = { easy: 6, normal: 8, hard: 10, extreme: 12 };
@@ -322,22 +322,39 @@ async function performDiceCheck(title, stat, difficulty, onComplete) {
     document.getElementById('dice-stat-bonus').textContent = statValue > 0 ? `(${STAT_NAMES[stat]} ${statValue} → 難度 -${Math.floor(statValue/2)})` : '';
     document.getElementById('dice-result-text').className = 'dice-result-text';
     document.getElementById('dice-reroll-section').className = 'dice-reroll-section';
-    document.getElementById('dice-display').textContent = '?';
-    document.getElementById('dice-display').className = 'dice-display';
+
+    // 重置 3D 骰子
+    const display = document.getElementById('dice-display');
+    display.className = 'dice-display';
+    const faces = display.querySelectorAll('.dice-face');
+    faces.forEach(face => face.textContent = '?');
+
     document.getElementById('dice-overlay').classList.add('show');
     await animateDiceRoll();
 }
 
 async function animateDiceRoll() {
     const display = document.getElementById('dice-display');
+    const faces = display.querySelectorAll('.dice-face');
+
     display.classList.add('rolling');
     for (let i = 0; i < 15; i++) {
-        display.textContent = rollD12();
+        // 更新所有面的數字為隨機值
+        faces.forEach(face => {
+            face.textContent = rollD12();
+        });
         await sleep(80 + i * 10);
     }
     display.classList.remove('rolling');
+
     const finalResult = rollD12();
-    display.textContent = finalResult;
+    // 設定最終結果到前面
+    faces[0].textContent = finalResult; // front face
+    // 其他面也設定為不同的隨機值
+    for (let i = 1; i < faces.length; i++) {
+        faces[i].textContent = rollD12();
+    }
+
     currentDiceCheck.result = finalResult;
     currentDiceCheck.success = finalResult >= currentDiceCheck.threshold;
     await sleep(300);
@@ -372,11 +389,11 @@ async function rerollDice() {
     document.getElementById('dice-reroll-section').className = 'dice-reroll-section';
     if(typeof showFloatingText !== 'undefined') showFloatingText('命運之輪轉動...', canvasWidth/2, canvasHeight/2, '#c0a0e0');
 
-    const luckBonus = playerCharacter.stats.luck || 0;
-    const adjustedThreshold = Math.max(2, currentDiceCheck.threshold - Math.floor(luckBonus / 3));
+    const cunningBonus = playerCharacter.stats.cunning || 0;
+    const adjustedThreshold = Math.max(2, currentDiceCheck.threshold - Math.floor(cunningBonus / 3));
     currentDiceCheck.threshold = adjustedThreshold;
     document.getElementById('dice-threshold').textContent = `目標：${adjustedThreshold} 以上`;
-    if (luckBonus > 0) document.getElementById('dice-stat-bonus').textContent += ` (運氣介入)`;
+    if (cunningBonus > 0) document.getElementById('dice-stat-bonus').textContent += ` (機變介入)`;
 
     await sleep(500);
     await animateDiceRoll();
@@ -397,12 +414,12 @@ let relationships = [];
 let playerCharacter = {
     id: 'player', name: '旅人', role: '命運的見證者', desc: '你，一個踏入這個世界的旅人。',
     faction: -1, x: 0, y: 0, known: true,
-    gender: '不指定', stats: { strength: 0, wisdom: 0, charisma: 0, luck: 0 },
+    gender: '不指定', stats: { authority: 0, empathy: 0, cunning: 0, logic: 0 },
     background: 'wanderer', traits: []
 };
 
 // 角色創建變數
-let tempStats = { strength: 0, wisdom: 0, charisma: 0, luck: 0 };
+let tempStats = { authority: 0, empathy: 0, cunning: 0, logic: 0 };
 let statPointsRemaining = 10;
 const BACKGROUND_INFO = {
     wanderer: { name: '流浪者', desc: '無初始陣營傾向', factionBonus: -1 },
@@ -428,13 +445,13 @@ function adjustStat(stat, delta) {
 }
 
 function resetCharacterForm() {
-    tempStats = { strength: 0, wisdom: 0, charisma: 0, luck: 0 };
+    tempStats = { authority: 0, empathy: 0, cunning: 0, logic: 0 };
     statPointsRemaining = 10;
     document.getElementById('char-name').value = '';
     document.querySelectorAll('input[name="gender"]')[0].checked = true;
     document.getElementById('char-background').value = 'wanderer';
     document.querySelectorAll('input[name="trait"]').forEach(cb => cb.checked = false);
-    ['strength', 'wisdom', 'charisma', 'luck'].forEach(s => document.getElementById(`stat-${s}`).textContent = '0');
+    ['authority', 'empathy', 'cunning', 'logic'].forEach(s => document.getElementById(`stat-${s}`).textContent = '0');
     document.getElementById('stat-points-remaining').textContent = '(剩餘點數: 10)';
 }
 
@@ -446,7 +463,7 @@ function confirmCharacterCreation() {
 
     let finalStats = { ...tempStats };
     if (background === 'mystery') {
-        const keys = ['strength', 'wisdom', 'charisma', 'luck'];
+        const keys = ['authority', 'empathy', 'cunning', 'logic'];
         const rnd = keys[Math.floor(Math.random() * keys.length)];
         finalStats[rnd] += 3;
     }
@@ -465,7 +482,7 @@ function confirmCharacterCreation() {
 function getCharacterPromptString() {
     const bg = BACKGROUND_INFO[playerCharacter.background];
     const traitsStr = playerCharacter.traits.map(t => TRAIT_INFO[t]?.name).filter(Boolean).join('、') || '無';
-    return `主角：${playerCharacter.name}，${playerCharacter.gender}，${bg.name}。性格：${traitsStr}。屬性：力${playerCharacter.stats.strength}/智${playerCharacter.stats.wisdom}/魅${playerCharacter.stats.charisma}/運${playerCharacter.stats.luck}`;
+    return `主角：${playerCharacter.name}，${playerCharacter.gender}，${bg.name}。性格：${traitsStr}。屬性：威儀${playerCharacter.stats.authority}/共情${playerCharacter.stats.empathy}/機變${playerCharacter.stats.cunning}/理性${playerCharacter.stats.logic}`;
 }
 
 function getTraitOptionModifiers() {

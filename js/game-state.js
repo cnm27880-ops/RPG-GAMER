@@ -73,7 +73,7 @@ class GameState {
             y: 0,
             known: true,
             gender: '不指定',
-            stats: { strength: 0, wisdom: 0, charisma: 0, luck: 0 },
+            stats: { authority: 0, empathy: 0, cunning: 0, logic: 0 },
             background: 'wanderer',
             traits: []
         };

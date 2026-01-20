@@ -279,7 +279,7 @@ function generateOptionsUI() {
         const btn = new Button(opt.text, (canvasWidth-btnW)/2, startY + i*(btnH+gap), btnW, btnH, () => {
             if (opt.type === 'risk') {
                 checkAndCreateSavePoint('risk');
-                const stat = opt.checkStat || 'strength'; // 這裡可優化自動判斷屬性
+                const stat = opt.checkStat || 'authority'; // 默認使用威儀
                 performDiceCheck('冒險抉擇', stat, 'hard', (res) => {
                     const txt = `${opt.text}（${res.success?'成功':'失敗'}）`;
                     triggerSceneGenerationWithDiceResult(txt, opt.timeAdvance||1, res);
