@@ -122,6 +122,7 @@ ${context.deadNPCWarning}
 - risk 選項風險高但回報多
 - focus 選項可揭示秘密或 NPC 真實動機
 ${context.traitHint}
+${context.mutatorsPrompt || ''}
 
 回傳 JSON：
 {
@@ -342,7 +343,8 @@ class PromptBuilder {
             npcList: this._formatNPCList(npcs),
             factions: factions,
             deadNPCWarning: this._getDeadNPCWarning(npcs),
-            traitHint: this._getTraitHint(playerCharacter)
+            traitHint: this._getTraitHint(playerCharacter),
+            mutatorsPrompt: this._getMutatorsPrompt(world)
         };
 
         return {
@@ -451,6 +453,17 @@ class PromptBuilder {
         if (deadNPCs.length === 0) return '';
 
         return `【重要】已死亡的NPC：${deadNPCs.map(n => n.name).join('、')}，絕對不能出現！`;
+    }
+
+    _getMutatorsPrompt(world) {
+        if (!world || !world.mutators || world.mutators.length === 0) return '';
+
+        // 使用 world-mutators.js 中的函數
+        if (typeof getMutatorsPrompt === 'function') {
+            return getMutatorsPrompt(world.mutators);
+        }
+
+        return '';
     }
 }
 

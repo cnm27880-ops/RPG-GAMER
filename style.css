@@ -150,6 +150,114 @@ body, html {
     color: #c0a0e0;
 }
 
+/* 世界異變顯示 */
+.mutators-display {
+    position: absolute;
+    top: 110px;
+    left: 12px;
+    max-width: 320px;
+    z-index: 10;
+}
+
+.mutators-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mutator-card {
+    background: linear-gradient(135deg, rgba(40, 35, 50, 0.95), rgba(30, 25, 40, 0.95));
+    border: 1px solid #5a4a7a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.mutator-card:hover {
+    border-color: #8a7aaa;
+    box-shadow: 0 0 15px rgba(138, 122, 170, 0.3);
+}
+
+.mutator-card.rarity-common {
+    border-color: #7a7a8a;
+}
+
+.mutator-card.rarity-uncommon {
+    border-color: #5a9a5a;
+}
+
+.mutator-card.rarity-rare {
+    border-color: #5a7aaa;
+    box-shadow: 0 0 10px rgba(90, 122, 170, 0.2);
+}
+
+.mutator-card.rarity-epic {
+    border-color: #9a5a9a;
+    box-shadow: 0 0 10px rgba(154, 90, 154, 0.3);
+}
+
+.mutator-card.rarity-legendary {
+    border-color: #ca8a2a;
+    box-shadow: 0 0 15px rgba(202, 138, 42, 0.4);
+    animation: legendaryGlow 2s ease-in-out infinite;
+}
+
+@keyframes legendaryGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(202, 138, 42, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(202, 138, 42, 0.6); }
+}
+
+.mutator-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.mutator-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mutator-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c0b0d0;
+    margin-bottom: 2px;
+}
+
+.mutator-desc {
+    font-size: 11px;
+    color: #8a8a9a;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mutator-card.expanded .mutator-desc {
+    white-space: normal;
+}
+
+@media (max-width: 600px) {
+    .mutators-display {
+        max-width: 260px;
+        top: 105px;
+    }
+    .mutator-icon {
+        font-size: 20px;
+    }
+    .mutator-name {
+        font-size: 12px;
+    }
+    .mutator-desc {
+        font-size: 10px;
+    }
+}
+
 /* 模態視窗 */
 .modal-overlay {
     position: fixed;

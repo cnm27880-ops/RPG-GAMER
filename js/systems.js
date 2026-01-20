@@ -301,9 +301,16 @@ let currentDiceCheck = null;
 let diceCheckCallback = null;
 const STAT_NAMES = { authority: '威儀', empathy: '共情', cunning: '機變', logic: '理性' };
 
-function calculateDiceThreshold(difficulty, statValue) {
+function calculateDiceThreshold(difficulty, statValue, stat = null) {
     const baseDifficulty = { easy: 6, normal: 8, hard: 10, extreme: 12 };
-    const threshold = (baseDifficulty[difficulty] || 8) - Math.floor(statValue / 2);
+    let threshold = (baseDifficulty[difficulty] || 8) - Math.floor(statValue / 2);
+
+    // 應用世界異變效果
+    if (currentWorld && currentWorld.mutators && typeof applyMutatorsToDifficulty === 'function') {
+        const mutatedDifficulty = applyMutatorsToDifficulty(threshold, stat, currentWorld.mutators);
+        threshold = mutatedDifficulty;
+    }
+
     return Math.max(2, Math.min(12, threshold));
 }
 
@@ -312,7 +319,7 @@ function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function performDiceCheck(title, stat, difficulty, onComplete) {
     const statValue = playerCharacter.stats[stat] || 0;
-    const threshold = calculateDiceThreshold(difficulty, statValue);
+    const threshold = calculateDiceThreshold(difficulty, statValue, stat);
     currentDiceCheck = { title, stat, difficulty, threshold, statValue, result: null, success: false, rerolled: false };
     diceCheckCallback = onComplete;
 

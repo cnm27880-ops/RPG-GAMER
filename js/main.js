@@ -163,14 +163,38 @@ function setupWorldSelectUI() {
 function showWorldIntro(world) {
     currentWorld = world;
     buttons = []; // 清空按鈕，防止點擊
+
+    // 抽取世界異變（1-3個）
+    const mutatorCount = Math.floor(Math.random() * 3) + 1; // 1-3個
+    currentWorld.mutators = drawRandomMutators(mutatorCount);
+
     const factionsHTML = world.factions.map((f, i) => `
         <div class="faction-card" style="border-left: 3px solid ${CONFIG.colors.factions[i]};">
             <h4>${f.name}</h4><p>${f.desc}</p>
         </div>`).join('');
-    
+
+    // 生成異變卡片 HTML
+    const mutatorsHTML = currentWorld.mutators.map(m => `
+        <div class="mutator-card rarity-${m.rarity}" style="margin:8px 0;">
+            <div class="mutator-icon">${m.icon}</div>
+            <div class="mutator-info">
+                <div class="mutator-name">${m.name}</div>
+                <div class="mutator-desc">${m.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
     document.getElementById('world-intro-content').innerHTML = `
         <h2>${world.name}</h2>
         <div class="desc">${world.desc}</div>
+
+        <div style="margin:25px 0;">
+            <h3 style="color:#c9a227;font-size:16px;margin-bottom:10px;text-align:center;">⚡ 世界異變</h3>
+            <div style="max-width:400px;margin:0 auto;">
+                ${mutatorsHTML}
+            </div>
+        </div>
+
         <div class="factions">${factionsHTML}</div>
         <div style="margin-top:30px;display:flex;gap:15px;justify-content:center;">
             <button class="start-adventure-btn" style="background:#3a3d4a;color:#aaa;" onclick="toggleWorldIntroModal(false)">← 返回</button>
@@ -202,6 +226,9 @@ async function startAdventureWithCharacter() {
     document.getElementById('fate-display').style.display = 'flex';
     document.getElementById('fate-value').textContent = fatePoints;
     CALENDAR.updateDisplay();
+
+    // 顯示世界異變
+    displayWorldMutators();
 
     currentState = STATE.LOADING;
     loadingText = "✧ 命運之輪轉動...";
@@ -291,6 +318,26 @@ function generateOptionsUI() {
         btn.timeAdvance = opt.timeAdvance;
         buttons.push(btn);
     });
+}
+
+function displayWorldMutators() {
+    if (!currentWorld || !currentWorld.mutators || currentWorld.mutators.length === 0) {
+        document.getElementById('mutators-display').style.display = 'none';
+        return;
+    }
+
+    const mutatorsHTML = currentWorld.mutators.map(m => `
+        <div class="mutator-card rarity-${m.rarity}" title="${m.prompt}">
+            <div class="mutator-icon">${m.icon}</div>
+            <div class="mutator-info">
+                <div class="mutator-name">${m.name}</div>
+                <div class="mutator-desc">${m.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('mutators-list').innerHTML = mutatorsHTML;
+    document.getElementById('mutators-display').style.display = 'block';
 }
 
 function saveApiKey() {
