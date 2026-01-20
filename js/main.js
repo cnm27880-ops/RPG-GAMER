@@ -214,6 +214,11 @@ async function startAdventureWithCharacter() {
     historyLog = [];
     factionData = currentWorld.factions.map(f => ({ name: f.name, rep: 50 }));
 
+    // 初始化遊戲狀態（包含末日鐘系統）
+    if (typeof GameState !== 'undefined') {
+        gameState = new GameState(currentWorld, playerCharacter, CALENDAR, factionData);
+    }
+
     // 清空存檔點（命運長河）以開始全新冒險
     if (typeof clearSavePoints === 'function') {
         clearSavePoints();
@@ -232,6 +237,14 @@ async function startAdventureWithCharacter() {
     // 顯示世界異變
     displayWorldMutators();
 
+    // 初始化並顯示末日鐘 UI
+    if (gameState && typeof updateDoomClockUI === 'function') {
+        updateDoomClockUI(gameState);
+    }
+    if (typeof updateToolbarButtonVisibility === 'function') {
+        updateToolbarButtonVisibility();
+    }
+
     currentState = STATE.LOADING;
     loadingText = "✧ 命運之輪轉動...";
     storyContext = `${currentWorld.name}：${currentWorld.desc}`;
@@ -246,7 +259,15 @@ async function triggerSceneGeneration(action, timeAdvance = 1) {
     loadingText = "✧ 命運推演中...";
     CALENDAR.advance(timeAdvance);
     historyLog.push({ role: 'Player', text: action });
-    
+
+    // 時間流逝造成的末日腐敗
+    if (gameState) {
+        gameState.applyDoomDecay();
+        if (typeof updateDoomClockUI === 'function') {
+            updateDoomClockUI(gameState);
+        }
+    }
+
     const res = await aiService.generateNextScene(currentWorld, storyContext, action, factionData, npcs, CALENDAR);
     if (res) processSceneResult(res, action);
     else {
@@ -260,9 +281,33 @@ async function triggerSceneGenerationWithDiceResult(action, timeAdvance, diceRes
     loadingText = "✧ 命運推演中...";
     CALENDAR.advance(timeAdvance);
     historyLog.push({ role: 'Player', text: action });
-    
-    const diceContext = diceResult.success ? 
-        `【檢定成功】${STAT_NAMES[diceResult.stat]}檢定通過（${diceResult.result} >= ${diceResult.threshold}），行動順利。` : 
+
+    // 【雙向末日鐘機制】
+    let doomChangeData = null;
+    if (gameState) {
+        // 時間流逝造成的末日腐敗
+        gameState.applyDoomDecay();
+
+        if (diceResult.success) {
+            // 成功：困難檢定可降低末日值（希望機制）
+            const isHardCheck = diceResult.difficulty === 'hard' || diceResult.difficulty === 'extreme';
+            if (isHardCheck) {
+                const decreaseAmount = 5 + Math.random() * 5; // 5-10%
+                doomChangeData = gameState.decreaseDoom(decreaseAmount, `${STAT_NAMES[diceResult.stat]}檢定成功`);
+            }
+        } else {
+            // 失敗：增加末日值（腐敗機制）
+            doomChangeData = gameState.increaseDoom(5, `${STAT_NAMES[diceResult.stat]}檢定失敗`);
+        }
+
+        // 更新 UI（帶浮動文字動畫）
+        if (typeof updateDoomClockUI === 'function') {
+            updateDoomClockUI(gameState, doomChangeData);
+        }
+    }
+
+    const diceContext = diceResult.success ?
+        `【檢定成功】${STAT_NAMES[diceResult.stat]}檢定通過（${diceResult.result} >= ${diceResult.threshold}），行動順利。` :
         `【檢定失敗】${STAT_NAMES[diceResult.stat]}檢定失敗（${diceResult.result} < ${diceResult.threshold}），遭遇挫折。`;
 
     const res = await aiService.generateNextSceneWithDice(currentWorld, storyContext, action, factionData, npcs, CALENDAR, diceContext);

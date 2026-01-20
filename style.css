@@ -203,6 +203,31 @@ body, html {
     color: #d0a0a0;
 }
 
+/* 末日值變化浮動文字動畫 */
+@keyframes doomFloatUp {
+    0% {
+        opacity: 0;
+        transform: translateY(0);
+    }
+    10% {
+        opacity: 1;
+        transform: translateY(-5px);
+    }
+    70% {
+        opacity: 1;
+        transform: translateY(-25px);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-35px);
+    }
+}
+
+.doom-floating-text {
+    display: inline-block;
+    white-space: nowrap;
+}
+
 /* 世界異變卡牌（用於 Modal 內）*/
 .mutator-card {
     background: linear-gradient(135deg, rgba(40, 35, 50, 0.95), rgba(30, 25, 40, 0.95));

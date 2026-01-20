@@ -3,7 +3,7 @@
 /**
  * 更新末日鐘 UI
  */
-function updateDoomClockUI(gameState) {
+function updateDoomClockUI(gameState, changeData = null) {
     if (!gameState) return;
 
     const doomDisplay = document.getElementById('doom-display');
@@ -15,7 +15,7 @@ function updateDoomClockUI(gameState) {
     // 顯示末日鐘
     doomDisplay.style.display = 'block';
 
-    // 更新進度條寬度
+    // 更新進度條寬度（帶動畫）
     const doomValue = Math.floor(gameState.doomClock);
     doomBar.style.width = `${doomValue}%`;
 
@@ -26,6 +26,67 @@ function updateDoomClockUI(gameState) {
     // 更新文字
     doomLevel.textContent = gameState.getDoomLevelDescription();
     doomLevel.style.color = color;
+
+    // 如果有變化數據，顯示浮動文字
+    if (changeData && Math.abs(changeData.change) > 0.1) {
+        showDoomChangeFloatingText(changeData);
+    }
+}
+
+/**
+ * 顯示末日值變化的浮動文字
+ */
+function showDoomChangeFloatingText(changeData) {
+    // 創建浮動文字容器（如果不存在）
+    let container = document.getElementById('doom-floating-text-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'doom-floating-text-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            pointer-events: none;
+        `;
+        document.body.appendChild(container);
+    }
+
+    // 創建浮動文字元素
+    const floatingText = document.createElement('div');
+    floatingText.className = 'doom-floating-text';
+
+    const changeAmount = Math.abs(changeData.change).toFixed(1);
+    const isHope = changeData.type === 'hope';
+
+    if (isHope) {
+        floatingText.innerHTML = `<span style="color:#80c090;">✦ 希望 +${changeAmount}%</span>`;
+        floatingText.style.textShadow = '0 0 10px rgba(128, 192, 144, 0.6)';
+    } else {
+        floatingText.innerHTML = `<span style="color:#c07070;">✦ 末日 +${changeAmount}%</span>`;
+        floatingText.style.textShadow = '0 0 10px rgba(192, 112, 112, 0.6)';
+    }
+
+    floatingText.style.cssText += `
+        font-size: 16px;
+        font-weight: 700;
+        padding: 8px 16px;
+        background: rgba(20, 22, 30, 0.95);
+        border: 1px solid ${isHope ? 'rgba(128, 192, 144, 0.5)' : 'rgba(192, 112, 112, 0.5)'};
+        border-radius: 20px;
+        margin-bottom: 8px;
+        animation: doomFloatUp 2s ease-out forwards;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    `;
+
+    container.appendChild(floatingText);
+
+    // 2秒後移除元素
+    setTimeout(() => {
+        floatingText.remove();
+    }, 2000);
 }
 
 /**
